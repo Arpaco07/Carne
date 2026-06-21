@@ -979,31 +979,39 @@ let salidasTemp   = [];
 // ── MAPA DE PORCIONADO ────────────────────────────────────────────────────────
 // Para cada pieza base, qué productos finales pueden salir
 const PORCIONADO_MAP = [
-  { src:'pieza basica rib eye cab',  salidas:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye'] },
-  { src:'pieza basica rib eye nac',  salidas:['Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye'] },
-  { src:'pieza basica rib eye',      salidas:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye'] },
-  { src:'pieza basica vacio',        salidas:['Vacío','Flap Meat'] },
-  { src:'pieza basica new york',     salidas:['New York'] },
-  { src:'pieza basica',              salidas:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye'] },
-  { src:'arrachera',                 salidas:['Arrachera','Arrachera gramaje','Tacos de Arrachera'] },
-  { src:'camaron chico',             salidas:['Camarón chico'] },
-  { src:'camaron grande',            salidas:['Camarón grande'] },
-  { src:'camaron',                   salidas:['Camarón grande','Camarón chico'] },
-  { src:'pulpo',                     salidas:['Pulpo','Tacos de pulpo'] },
-  { src:'salmon',                    salidas:['Salmón'] },
-  { src:'picana',                    salidas:['Picaña','Tacos de Picaña'] },
-  { src:'picaña',                    salidas:['Picaña','Tacos de Picaña'] },
-  { src:'filete cab',                salidas:['Filete corte','Filete Tacos CAB'] },
-  { src:'filete nacional',           salidas:['Filete Volcán Nacional','Filete Tacos CAB'] },
-  { src:'filete',                    salidas:['Filete corte','Filete Tacos CAB','Filete Volcán Nacional'] },
-  { src:'lengua',                    salidas:['Lengua a la veracruzana','Tacos Lengua'] },
-  { src:'molleja',                   salidas:['Mollejas'] },
-  { src:'hamburguesa',               salidas:['Hamburguesas Los Pares'] },
-  { src:'pollo',                     salidas:['Pechugas de pollo','Ensaladas','Caldo de pollo'] },
-  { src:'tuetano',                   salidas:['Tuétano'] },
-  { src:'papa',                      salidas:['Papas gajo'] },
-  { src:'bolonesa',                  salidas:['Boloñesa'] },
-  { src:'boloñesa',                  salidas:['Boloñesa'] },
+  // FILETE CAB → productos del grill + tacos
+  { src:'filete cab', salidas:['FILETE CAB','FILETE','TAPA DE RIB EYE','OJO DE RIB EYE','RIB EYE','CHICHARRON DE RIB EYE','RIB EYE CON QUESO','AGUACHILE DE RIB EYE'] },
+  // FILETE NACIONAL
+  { src:'filete nacional', salidas:['FILETE','VOLCAN'] },
+  // ARRACHERA → del grill + tacos
+  { src:'arrachera', salidas:['ARRACHERA','ARRACHERA'] },
+  // PICAÑA
+  { src:'picaña', salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
+  { src:'picana', salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
+  // SALMON
+  { src:'salmon', salidas:['SALMON','SALMON PASTA'] },
+  // PULPO
+  { src:'pulpo', salidas:['PULPO','TACOS DE PULPO'] },
+  // CAMARON
+  { src:'camaron chico', salidas:['CAMARON CHICO'] },
+  { src:'camaron grande', salidas:['CAMARON GRANDE'] },
+  { src:'camaron', salidas:['CAMARON GRANDE','CAMARON CHICO'] },
+  // LENGUA
+  { src:'lengua', salidas:['LENGUA A LA VERACRUZANA','LENGUA'] },
+  // MOLLEJAS
+  { src:'molleja', salidas:['MOLLEJAS'] },
+  // COW BOY / FLAP MEAT / NEW YORK / T-BONE
+  { src:'cow boy', salidas:['COW BOY','FLAP MEAT'] },
+  { src:'flap meat', salidas:['FLAP MEAT'] },
+  { src:'new york', salidas:['NEW YORK'] },
+  { src:'t-bone', salidas:['T-BONE'] },
+  // POLLO
+  { src:'pollo', salidas:['PECHUGA DE POLLO','ENSALADAS','CALDO DE POLLO'] },
+  // HAMBURGUESA
+  { src:'hamburguesa', salidas:['HAMBURGUESAS CARNE'] },
+  // TUÉTANO / PAPAS
+  { src:'tuetano', salidas:['TUETANO'] },
+  { src:'papa', salidas:['PAPAS GAJO'] },
 ];
 
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
@@ -1017,9 +1025,10 @@ function getSalidasEsperadas(nombreFuente){
   const resultado = [];
   entrada.salidas.forEach(salLabel => {
     const nl = norm(salLabel);
-    const prod = catalogo.find(p => p.activo!==false && norm(p.nombre).includes(nl.split(' ')[0]) && nl.split(' ').every(w=>norm(p.nombre).includes(w)||w.length<=2));
-    const prodAlt = !prod ? catalogo.find(p => p.activo!==false && nl.split(' ').some(w=>w.length>3&&norm(p.nombre).includes(w))) : null;
-    const match = prod || prodAlt;
+    // Buscar match exacto primero, luego parcial
+    const match = catalogo.find(p => p.activo!==false && norm(p.nombre) === nl)
+                || catalogo.find(p => p.activo!==false && norm(p.nombre).includes(nl))
+                || catalogo.find(p => p.activo!==false && nl.includes(norm(p.nombre)));
     if(match){
       if(!resultado.find(r=>r.id===match.id))
         resultado.push({id:match.id, nombre:match.nombre, unidad:match.unidad, cantidad:'', esperada:true});
