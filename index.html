@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Los Pares 84×88 — Inventario</title>
+<style>
+:root{--bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);--text:#f0f0f0;--text2:#888;--text3:#555;--gold:#e2b96a;--gold2:rgba(226,185,106,0.1);--red:#f87171;--redbg:rgba(248,113,113,0.1);--green:#4ade80;--greenbg:rgba(74,222,128,0.1);--blue:#60a5fa;--amber:#fbbf24;--amberbg:rgba(251,191,36,0.1);--radius:10px;--rsm:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+
+/* ── INPUTS SIN SPINNER ─── */
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+/* Inputs grandes para celular */
+.inp{background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--rsm);color:var(--text);font-size:15px;padding:10px 12px;outline:none;transition:border .2s;font-family:inherit;width:100%;-webkit-appearance:none}
+.inp:focus{border-color:var(--gold);background:#1e1e1e}
+.inp-sm{font-size:14px;padding:7px 10px;width:88px;text-align:right}
+.inp-warn{background:var(--amberbg)!important;border-color:rgba(251,191,36,.35)!important}
+
+/* ── LAYOUT ── */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-name{font-size:15px;font-weight:600}
+.logo-sub{font-size:10px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+.nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto}
+.nav-btn{flex:1;min-width:64px;padding:12px 4px;border:none;background:none;color:var(--text2);font-size:11px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.nav-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.main{max-width:960px;margin:0 auto;padding:14px}
+.screen{display:none}.screen.active{display:block}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.stat-val{font-size:22px;font-weight:600}
+
+/* ── ALERTAS ── */
+.alert{background:var(--redbg);border:1px solid rgba(248,113,113,.25);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;color:var(--red);font-size:13px}
+.ok-bar{background:var(--greenbg);border:1px solid rgba(74,222,128,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;color:var(--green);font-size:13px}
+.hint{font-size:12px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px}
+.loader{text-align:center;padding:32px;color:var(--text2);font-size:13px}
+.conn-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+
+/* ── TABLAS ── */
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:420px}
+thead th{background:var(--bg3);padding:8px 10px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);white-space:nowrap}
+thead th:first-child{text-align:left}
+tbody tr{border-top:1px solid var(--border)}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody td{padding:7px 8px;text-align:right;font-size:13px;vertical-align:middle}
+tbody td:first-child{text-align:left;font-weight:500}
+.dp{color:var(--red);font-weight:700}
+.dn{color:var(--green);font-weight:700}
+.dz{color:var(--text3)}
+
+/* ── FORMS ── */
+.form-card{background:var(--bg2);border:1px solid var(--gold);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.form-card h3{font-size:14px;font-weight:600;color:var(--gold);margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
+.form-group{display:flex;flex-direction:column;gap:7px}
+.form-group label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em}
+.btn{padding:11px 20px;border-radius:var(--radius);border:1px solid var(--border2);background:none;color:var(--text);font-size:14px;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn:hover{background:var(--bg3)}
+.btn-gold{background:var(--gold);color:#0f0f0f;border:none;font-weight:700}
+.btn-gold:hover{opacity:.85}
+.btn-row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+
+/* ── CATÁLOGO CARDS ── */
+.prod-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);gap:8px}
+.prod-row:last-child{border:none}
+.prod-info{flex:1;min-width:0}
+.prod-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.icon-btn{background:none;border:1px solid var(--border);border-radius:var(--rsm);padding:6px 12px;color:var(--text2);cursor:pointer;font-size:12px}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.icon-btn.del:hover{background:var(--redbg);color:var(--red);border-color:rgba(248,113,113,.3)}
+.cat-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.cat-hdr{padding:10px 14px;background:var(--bg3);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.cat-hdr h4{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.cat-body{display:none}.cat-body.open{display:block}
+.sec-hdr{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:14px 0 8px}
+
+/* ── SETUP ── */
+.setup-wrap{max-width:480px;margin:40px auto;padding:16px}
+.setup-card{background:var(--bg2);border:1px solid var(--gold);border-radius:var(--radius);padding:24px}
+.setup-card h2{color:var(--gold);font-size:18px;margin-bottom:6px}
+.setup-step{background:var(--bg3);border-radius:var(--rsm);padding:12px 14px;margin-bottom:10px;font-size:13px;line-height:1.6;color:var(--text2)}
+.setup-step b{color:var(--text)}
+.setup-step code{background:var(--bg);padding:1px 6px;border-radius:4px;font-family:monospace;color:var(--gold);font-size:12px}
+
+/* ── ACCION BTNS DASHBOARD ── */
+.accion-btn{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:15px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:var(--text);width:100%;text-align:left;margin-bottom:10px;font-size:14px}
+.accion-btn:hover{background:var(--bg3)}
+.sigma-card{background:var(--gold2);border:1px solid rgba(226,185,106,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px}
+
+/* ── HISTORIAL ── */
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+
+/* ── PORCIONAR TOGGLE ── */
+.tog-porc{padding:3px 10px;border-radius:20px;border:none;cursor:pointer;font-size:11px;font-weight:700;transition:all .2s}
+.tog-directo{background:var(--greenbg);color:var(--green);border:1px solid rgba(74,222,128,.25)}
+.tog-porcionar{background:var(--amberbg);color:var(--amber);border:1px solid rgba(251,191,36,.25)}
+
+/* ── PRINT ── */
+@media print{
+  #appScreen, #setupScreen { display: none !important; }
+  #printArea {
+    display: block !important;
+    color: #000 !important;
+    background: #fff !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+    padding: 10px !important;
+  }
+  #printArea table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  #printArea th { background: #eee !important; color: #333; padding: 7px 8px; border: 1px solid #ccc; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+  #printArea td { padding: 7px 8px; border: 1px solid #ddd; font-size: 12px; color: #000; }
+  #printArea .dp { color: #c00 !important; font-weight: 700; }
+  #printArea .dn { color: #060 !important; font-weight: 700; }
+  #printArea .ph { font-size: 15px; font-weight: 700; text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 16px; }
+  #printArea .cat-label { background: #f0f0f0; padding: 5px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin: 10px 0 4px; border-left: 3px solid #999; }
+  #printArea .stat-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  #printArea .stat-box { border: 1px solid #ddd; padding: 8px 14px; border-radius: 4px; }
+  #printArea .stat-box .lbl { font-size: 10px; text-transform: uppercase; color: #666; }
+  #printArea .stat-box .val { font-size: 18px; font-weight: 700; }
+  #printArea .prod-item { display: flex; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+  #printArea .section-block { border: 1px solid #ccc; border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+  #printArea .section-title { background: #f5f5f5; padding: 7px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; border-bottom: 1px solid #ddd; }
+  #printArea .hist-row { display: flex; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+  #printArea .badge-red { color: #c00; font-weight: 700; }
+  #printArea .badge-green { color: #060; font-weight: 700; }
+  #printArea .warn-note { background: #fff8e1; border: 1px solid #f0c040; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; font-size: 11px; color: #7a6000; }
+}
+
+@media(max-width:600px){.main{padding:10px}.stats{grid-template-columns:1fr 1fr}.inp-sm{width:80px}}
+</style>
+</head>
+<body>
+
+<!-- ── SETUP (se muestra si no hay config) ──────────────────────────────── -->
+<div id="setupScreen" style="display:none">
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <h2>⚙️ Configurar Supabase</h2>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:18px">Solo se hace una vez. Después el sistema abre directo.</p>
+
+      <div class="setup-step"><b>1.</b> Ve a <code>supabase.com</code> → crea cuenta gratis → New Project</div>
+      <div class="setup-step"><b>2.</b> Espera que cargue (~2 min) → abre <b>SQL Editor</b> → pega el archivo <code>pares_supabase.sql</code> → Run</div>
+      <div class="setup-step"><b>3.</b> Ve a <b>Settings → API</b> y copia los datos de abajo:</div>
+
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Project URL</label>
+        <input class="inp" type="text" id="cfgUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" autocapitalize="off">
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label>Anon / Public Key</label>
+        <input class="inp" type="text" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off" autocapitalize="off">
+      </div>
+      <button class="btn btn-gold" style="width:100%;font-size:15px" onclick="guardarConfig()">Conectar y arrancar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP PRINCIPAL ────────────────────────────────────────────────────── -->
+<div id="appScreen" style="display:none">
+
+<div class="header">
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+      <ellipse cx="50" cy="38" rx="40" ry="28" stroke="#e2b96a" stroke-width="3" fill="none"/>
+      <path d="M34 18 Q52 52 57 88" stroke="#e2b96a" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M63 16 L59 84" stroke="#e2b96a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div><div class="logo-name">Los Pares 84×88</div><div class="logo-sub">Inventario de carnes</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="connStatus" style="font-size:11px;color:var(--text2)">
+      <span class="conn-dot" id="connDot" style="background:var(--text3)"></span>
+      <span id="connTxt">Conectando...</span>
+    </span>
+    <button class="btn" style="padding:5px 10px;font-size:11px" onclick="mostrarSetup()">⚙️</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="goTo('dash')">🏠 Inicio</button>
+  <button class="nav-btn" onclick="goTo('catalogo')">📋 Catálogo</button>
+  <button class="nav-btn" onclick="goTo('corte')">🥩 Corte</button>
+  <button class="nav-btn" onclick="goTo('bodega')">📦 Bodega</button>
+  <button class="nav-btn" onclick="goTo('porcionar')">🔪 Porcionar</button>
+  <button class="nav-btn" onclick="goTo('diffs')">⚖️ Diferencias</button>
+</div>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div class="screen active" id="screen-dash">
+  <div class="stats" id="dStats"></div>
+  <div id="dAlert"></div>
+  <div class="sigma-card">
+    <span style="font-size:22px">🚚</span>
+    <div><div style="color:var(--gold);font-weight:700;font-size:13px">Surtido Sigma</div>
+    <div style="color:var(--gold);opacity:.7;font-size:12px">Surtido semanal — cada lunes</div></div>
+  </div>
+  <div class="sec-hdr">Acciones rápidas</div>
+  <button class="accion-btn" onclick="goTo('catalogo')"><span>📋 &nbsp;Catálogo de productos</span><span style="color:var(--gold)">›</span></button>
+  <button class="accion-btn" onclick="goTo('corte')"><span>🥩 &nbsp;Registrar corte del día</span><span style="color:var(--gold)">›</span></button>
+  <button class="accion-btn" onclick="goTo('bodega')"><span>📦 &nbsp;Bodega y transferencias</span><span style="color:var(--gold)">›</span></button>
+  <button class="accion-btn" onclick="goTo('porcionar')"><span>🔪 &nbsp;Porcionar piezas</span><span style="color:var(--gold)">›</span></button>
+  <button class="accion-btn" onclick="goTo('diffs')"><span>⚖️ &nbsp;Diferencias del mes</span><span style="color:var(--gold)">›</span></button>
+  <div class="sec-hdr">Resumen del mes</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:6px" id="dResumen"><div class="loader">Cargando...</div></div>
+</div>
+
+<!-- CATÁLOGO -->
+<div class="screen" id="screen-catalogo">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:16px;font-weight:600">Catálogo de productos</div>
+    <div style="font-size:12px;color:var(--text2)">Todos los cortes y productos</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn no-print" onclick="imprimirSeccion('catalogo')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+      <button class="btn btn-gold" onclick="toggleForm()">+ Nuevo producto</button>
+    </div>
+  </div>
+  <div class="print-header" id="phCatalogo">LOS PARES 84×88 — Catálogo de productos</div>
+
+  <div class="form-card" id="formNuevo" style="display:none">
+    <h3 id="formTitle">+ Nuevo producto</h3>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nombre del producto</label>
+        <input class="inp" type="text" id="fNombre" placeholder="Ej: Arrachera, Rib Eye...">
+      </div>
+      <div class="form-group">
+        <label>Categoría</label>
+        <select class="inp" id="fCat">
+          <option value="Del Grill">Del Grill</option>
+          <option value="Tacos">Tacos</option>
+          <option value="Del Mar">Del Mar</option>
+          <option value="Entradas">Entradas</option>
+          <option value="Para ir picando">Para ir picando</option>
+          <option value="Granja">Granja</option>
+          <option value="Para el antojo">Para el antojo</option>
+          <option value="Caldos">Caldos</option>
+          <option value="Otros">Otros</option>
+          <option value="Postres">Postres</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unidad</label>
+        <select class="inp" id="fUnidad">
+          <option value="piezas">Piezas</option>
+          <option value="kg">Kilogramos (kg)</option>
+          <option value="porciones">Porciones</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Precio unitario ($)</label>
+        <input class="inp" type="number" inputmode="decimal" id="fPrecio" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>¿En bodega (casa)?</label>
+        <select class="inp" id="fBodega">
+          <option value="si">Sí — también en bodega</option>
+          <option value="no">No — solo restaurante</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Código Sigma</label>
+        <input class="inp" type="text" inputmode="numeric" id="fCod" placeholder="Opcional">
+      </div>
+      <div class="form-group">
+        <label>Stock bodega (piezas)</label>
+        <input class="inp" type="number" inputmode="decimal" id="fStockB" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Stock restaurante</label>
+        <input class="inp" type="number" inputmode="decimal" id="fStockR" placeholder="0">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="toggleForm()">Cancelar</button>
+      <button class="btn btn-gold" id="btnGuardarProd" onclick="guardarProducto()">Guardar</button>
+    </div>
+  </div>
+
+  <input class="inp" type="text" placeholder="🔍  Buscar producto..." id="searchInput" oninput="filtrarProductos()" style="margin-bottom:14px">
+  <div id="catalogoLista"><div class="loader">Cargando catálogo...</div></div>
+</div>
+
+<!-- CORTE -->
+<div class="screen" id="screen-corte">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:16px;font-weight:600">Corte del día</div>
+      <div style="font-size:12px;color:var(--text2)" id="cFecha"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn no-print" onclick="imprimirSeccion('corte')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+      <input type="date" class="inp no-print" id="fechaSel" style="width:auto;font-size:13px;padding:8px 12px" onchange="cargarCorte()">
+    </div>
+  </div>
+  <div class="print-header" id="phCorte"></div>
+  <div class="stats" id="cStats"></div>
+  <div id="cAlert"></div>
+  <div class="hint no-print">💡 <b>Restaurante ✏️</b> = editable — ajústalo si necesitas corregir el stock inicial. <b>Vendido</b> = escríbelo a mano. <b>Queda</b> = Restaurante − Vendido (automático). <b>Tiene</b> = anotación opcional.</div>
+  <div id="corteTabla"><div class="loader">Cargando corte...</div></div>
+  <div class="btn-row">
+    <button class="btn" onclick="goTo('bodega')">← Bodega</button>
+    <button class="btn btn-gold" id="btnGuardarCorte" onclick="guardarCorte()">Guardar corte del día</button>
+  </div>
+</div>
+
+<!-- BODEGA -->
+<div class="screen" id="screen-bodega">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:16px;font-weight:600">Bodega (Casa)</div>
+      <div style="font-size:12px;color:var(--text2)">Stock en casa · Lo que mandas al restaurante hoy</div>
+    </div>
+    <button class="btn no-print" onclick="imprimirSeccion('bodega')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+  </div>
+  <div class="print-header" id="phBodega">LOS PARES 84×88 — Bodega</div>
+  <div class="stats" id="bStats"></div>
+  <div class="hint no-print">💡 <span style="color:var(--amber)"><b>Requerido</b></span> = cuántas piezas mandas hoy. <span style="color:var(--green)"><b>Directo</b></span> = va al restaurante tal cual. <span style="color:var(--amber)"><b>Porcionar</b></span> = se procesa en cocina antes (tacos, corte, etc.) — toca el botón para cambiar.</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>En casa</th><th style="background:var(--amberbg)">Requerido</th><th>Quedan</th><th>Traspaso</th><th>$/u</th></tr></thead>
+      <tbody id="bTbody"><tr><td colspan="6" class="loader">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="btn-row"><button class="btn btn-gold" onclick="confirmarTransf()">✓ Confirmar transferencia</button></div>
+</div>
+
+<!-- DIFERENCIAS -->
+<div class="screen" id="screen-diffs">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:16px;font-weight:600">Diferencias & Cargos</div>
+    <button class="btn no-print" onclick="imprimirSeccion('diffs')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+  </div>
+  <div class="print-header" id="phDiffs">LOS PARES 84×88 — Diferencias & Cargos</div>
+  <div id="diffsHoy"></div>
+  <div class="sec-hdr">Historial del mes</div>
+  <div id="diffsHist" style="margin-top:8px"><div class="loader">Cargando historial...</div></div>
+</div>
+
+<!-- PORCIONAR -->
+<div class="screen" id="screen-porcionar">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:16px;font-weight:600">Porcionado pendiente</div>
+      <div style="font-size:12px;color:var(--text2)">Piezas en bodega trasladadas que esperan ser porcionadas</div>
+    </div>
+  </div>
+  <div class="hint">💡 Estas piezas <b>ya se descontaron de bodega</b>. Cuando termines de porcionar cada una, registra qué productos salieron y en qué cantidad — eso se suma automáticamente al stock del restaurante.</div>
+  <div id="porcionarLista"><div class="loader">Cargando...</div></div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /appScreen -->
+
+<!-- Área de impresión: siempre oculta, se llena al imprimir -->
+<div id="printArea" style="display:none"></div>
+
+<script>
+// ── CONFIG SUPABASE ───────────────────────────────────────────────────────────
+let SB_URL = '';
+let SB_KEY = '';
+
+function guardarConfig(){
+  const url = document.getElementById('cfgUrl').value.trim().replace(/\/$/,'');
+  const key = document.getElementById('cfgKey').value.trim();
+  if(!url||!key){alert('Necesitas pegar los dos datos de Supabase.');return;}
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  SB_URL = url; SB_KEY = key;
+  iniciarApp();
+}
+
+function mostrarSetup(){
+  document.getElementById('setupScreen').style.display='block';
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('cfgUrl').value = SB_URL;
+  document.getElementById('cfgKey').value = SB_KEY;
+}
+
+// ── API SUPABASE ──────────────────────────────────────────────────────────────
+async function sb(table, method='GET', body=null, query='', options={}){
+  const headers = {
+    'apikey': SB_KEY,
+    'Authorization': `Bearer ${SB_KEY}`,
+    'Content-Type': 'application/json',
+  };
+  if(options.upsert) headers['Prefer'] = 'resolution=merge-duplicates';
+  else if(method==='POST') headers['Prefer'] = 'return=representation';
+
+  const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
+    method, headers,
+    body: body ? JSON.stringify(body) : null
+  });
+  if(!res.ok){
+    const err = await res.text();
+    throw new Error(`${method} ${table}: ${err}`);
+  }
+  if(method==='DELETE'||res.status===204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// shortcuts
+const sbGet  = (t,q='')        => sb(t,'GET',null,q);
+const sbPost = (t,b,opts={})   => sb(t,'POST',b,'',opts);
+const sbPatch= (t,q,b)         => sb(t,'PATCH',b,q);
+const sbDel  = (t,q)           => sb(t,'DELETE',null,q);
+const sbUps  = (t,b,conflict='') => sb(t,'POST',b, conflict?`?on_conflict=${conflict}`:'', {upsert:true});
+
+// ── ESTADO LOCAL ──────────────────────────────────────────────────────────────
+const CATS_ORDER = ['Del Grill','Tacos','Del Mar','Entradas','Para ir picando','Granja','Para el antojo','Caldos','Otros','Postres'];
+let catalogo = [];    // productos de Supabase
+let corteHoy = {};    // {productoId: {stock_resta,vendido,tiene}}
+let editandoId = null;
+let fechaCorte = todayStr();
+let _autoSaveTimer = null;   // debounce: guarda 1.2s después del último cambio
+
+function todayStr(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function r(n){ return Math.round((parseFloat(n)||0)*100)/100; }
+function f(n){ const v=r(n); return v===0?'0':v.toString(); }
+function queda(stockR, vendido){ return r(stockR - vendido); }
+function diff(q, tiene){ if(tiene===''||tiene===null||tiene===undefined) return null; const t=r(tiene); return r(q-t); }
+
+// ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
+let _seccionActual = 'dash';
+
+async function goTo(id){
+  // Autoguardar corte antes de salir — si falla, avisar y no navegar
+  if(_seccionActual === 'corte' && id !== 'corte'){
+    const tieneData = Object.values(corteHoy).some(c=>r(c.stock_resta)>0||r(c.vendido)>0);
+    if(tieneData){
+      try{
+        await autoGuardarCorte();
+      }catch(e){
+        alert('⚠️ No se pudo guardar el corte antes de cambiar de sección.\nRevisa tu conexión e intenta de nuevo.\n\nError: '+e.message);
+        return; // No navegar si falló el guardado
+      }
+    }
+  }
+  _seccionActual = id;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dash','catalogo','corte','bodega','porcionar','diffs'][i]===id));
+  const fn={dash:rDash,catalogo:()=>{cargarCatalogo();},corte:()=>{fechaCorte=todayStr();document.getElementById('fechaSel').value=fechaCorte;cargarCorte();},bodega:rBodega,porcionar:rPorcionado,diffs:rDiffs};
+  if(fn[id]) fn[id]();
+}
+
+// Guarda el corte en segundo plano sin alert, sin cambiar fecha
+async function autoGuardarCorte(){
+  const btn = document.getElementById('btnGuardarCorte');
+  if(btn){ btn.textContent='⏳ Guardando...'; btn.disabled=true; }
+  try{
+    const activos = catalogo.filter(p=>p.activo!==false);
+    const rows = activos.map(p=>{
+      const c = corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
+      const q = queda(c.stock_resta, c.vendido);
+      const d = diff(q, c.tiene);
+      return {fecha:fechaCorte, producto_id:p.id, stock_resta:c.stock_resta, vendido:c.vendido, queda:q, tiene:c.tiene||'', diferencia:d};
+    });
+    await sbUps('cortes', rows, 'fecha,producto_id');
+    // NO se toca catalogo.stock_resta aquí — ese campo solo cambia con traspasos de bodega
+    const cd = activos.filter(p=>{const c=corteHoy[p.id];if(!c)return false;const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;});
+    const monto = cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0);
+    await sbUps('historial',[{fecha:fechaCorte,num_diferencias:cd.length,monto_total:Math.round(monto),monto_favor:0}],'fecha');
+    if(btn){ btn.textContent='✅ Guardado'; btn.disabled=false; setTimeout(()=>{btn.textContent='Guardar corte del día';},2000); }
+  }catch(e){
+    console.warn('Autoguardado falló:', e.message);
+    if(btn){ btn.textContent='❌ Error al guardar'; btn.disabled=false; setTimeout(()=>{btn.textContent='Guardar corte del día';},2500); }
+    throw e; // Relanzar para que goTo pueda atraparlo
+  }
+}
+
+// ── CONEXIÓN ──────────────────────────────────────────────────────────────────
+async function checkConn(){
+  try{
+    await sbGet('catalogo','?limit=1');
+    document.getElementById('connDot').style.background='var(--green)';
+    document.getElementById('connTxt').textContent='Conectado';
+  }catch(e){
+    document.getElementById('connDot').style.background='var(--red)';
+    document.getElementById('connTxt').textContent='Sin conexión';
+  }
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+async function rDash(){
+  document.getElementById('hdrDate2') && (document.getElementById('hdrDate2').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}));
+
+  const activos = catalogo.filter(p=>p.activo!==false);
+  const bodega = activos.filter(p=>p.bodega);
+  const totalB = bodega.reduce((s,p)=>s+r(p.stock_bodega),0);
+
+  // diferencias hoy
+  const conDiff = [];
+  for(const p of activos){
+    const c = corteHoy[p.id];
+    if(!c) continue;
+    const d = diff(queda(c.stock_resta, c.vendido), c.tiene);
+    if(d!==null && d>0) conDiff.push(p.nombre);
+  }
+
+  document.getElementById('dStats').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Productos</div><div class="stat-val">${activos.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Stock bodega</div><div class="stat-val" style="color:var(--green)">${f(totalB)}</div></div>
+    <div class="stat"><div class="stat-lbl">Diferencias hoy</div><div class="stat-val" style="color:${conDiff.length?'var(--red)':'var(--green)'}">${conDiff.length}</div></div>`;
+  document.getElementById('dAlert').innerHTML = conDiff.length
+    ? `<div class="alert">⚠️ <b>${conDiff.length} producto${conDiff.length>1?'s':''} con faltante</b>: ${conDiff.join(', ')}</div>` : '';
+
+  // Verificar pendientes de porcionar
+  try{
+    const pp = await sbGet('porcionado_pendiente','?status=eq.pendiente&select=id') || [];
+    if(pp.length){
+      const cur = document.getElementById('dStats').innerHTML;
+      document.getElementById('dStats').innerHTML = cur +
+        `<div class="stat" style="border-color:var(--amber)"><div class="stat-lbl">Por porcionar</div><div class="stat-val" style="color:var(--amber)">${pp.length}</div></div>`;
+      document.getElementById('dAlert').innerHTML +=
+        `<div style="background:var(--amberbg);border:1px solid rgba(251,191,36,.25);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;color:var(--amber);font-size:13px;cursor:pointer" onclick="goTo('porcionar')">
+          ⚙️ <b>${pp.length} pieza${pp.length>1?'s':''} pendiente${pp.length>1?'s':''} de porcionar</b> — toca aquí para registrar →
+        </div>`;
+    }
+  }catch(e){}
+
+  // resumen historial
+  try{
+    const hist = await sbGet('historial','?order=fecha.desc&limit=30');
+    const tm = (hist||[]).reduce((s,h)=>s+r(h.monto_total)-r(h.monto_favor),0);
+    const dc = (hist||[]).filter(h=>h.num_diferencias>0).length;
+    document.getElementById('dResumen').innerHTML=`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">Diferencias del mes</span><span style="font-weight:600">${(hist||[]).reduce((s,h)=>s+h.num_diferencias,0)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">Monto acumulado</span><span style="font-weight:600;color:var(--red)">$${tm.toLocaleString('es-MX')}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--text2)">Días sin diferencia</span><span style="font-weight:600;color:var(--green)">${(hist||[]).length-dc} días</span></div>`;
+  }catch(e){document.getElementById('dResumen').innerHTML='<div class="loader">Error cargando historial</div>';}
+}
+
+// ── CATÁLOGO ──────────────────────────────────────────────────────────────────
+async function cargarCatalogo(){
+  document.getElementById('catalogoLista').innerHTML='<div class="loader">⏳ Cargando productos...</div>';
+  try{
+    // Preservar _req antes de recargar para que bodega no pierda valores en tránsito
+    const reqPrev = {};
+    catalogo.forEach(p=>{ if(p._req) reqPrev[p.id]=p._req; });
+    catalogo = await sbGet('catalogo','?order=cat,nombre&activo=eq.true') || [];
+    catalogo.forEach(p=>{ if(reqPrev[p.id]) p._req=reqPrev[p.id]; });
+    filtrarProductos();
+  }catch(e){
+    document.getElementById('catalogoLista').innerHTML=`<div class="alert">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+function filtrarProductos(){
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  const lista = q ? catalogo.filter(p=>p.nombre.toLowerCase().includes(q)) : catalogo;
+  const grupos={};
+  CATS_ORDER.forEach(c=>grupos[c]=[]);
+  lista.forEach(p=>{(grupos[p.cat]=grupos[p.cat]||[]).push(p);});
+
+  let html='';
+  for(const cat of CATS_ORDER){
+    const prods=grupos[cat]||[];if(!prods.length)continue;
+    html+=`<div class="cat-section">
+      <div class="cat-hdr" onclick="this.nextElementSibling.classList.toggle('open')">
+        <h4>${cat}</h4><span style="font-size:11px;color:var(--text3)">${prods.length} productos</span>
+      </div>
+      <div class="cat-body open">
+      ${prods.map(p=>`<div class="prod-row">
+        <div class="prod-info">
+          <div class="prod-name">${p.nombre}</div>
+          <div class="prod-meta">${p.unidad} · ${p.precio?'$'+p.precio+'/u':'sin precio'}${p.bodega?' · <span style="color:var(--green)">📦 bodega</span>':''}${p.cod?' · '+p.cod:''}</div>
+          <div class="prod-meta" style="margin-top:2px">Bodega: <b style="color:var(--text)">${f(p.stock_bodega)}</b> · Rest: <b style="color:var(--text)">${f(p.stock_resta)}</b></div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="icon-btn" onclick="editarProducto(${p.id})">✏️</button>
+          <button class="icon-btn del" onclick="eliminarProducto(${p.id})">✕</button>
+        </div>
+      </div>`).join('')}
+      </div></div>`;
+  }
+  if(!html) html='<div style="color:var(--text2);text-align:center;padding:32px">Sin productos.</div>';
+  document.getElementById('catalogoLista').innerHTML=html;
+}
+
+function toggleForm(clear=true){
+  const f=document.getElementById('formNuevo');
+  if(f.style.display!=='none'){f.style.display='none';editandoId=null;}
+  else{if(clear)limpiarForm();f.style.display='block';f.scrollIntoView({behavior:'smooth',block:'nearest'});}
+}
+
+function limpiarForm(){
+  ['fNombre','fPrecio','fCod','fStockB','fStockR'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fCat').value='Del Grill';
+  document.getElementById('fUnidad').value='piezas';
+  document.getElementById('fBodega').value='si';
+  document.getElementById('formTitle').textContent='+ Nuevo producto';
+  editandoId=null;
+}
+
+function editarProducto(id){
+  const p=catalogo.find(x=>x.id===id);if(!p)return;
+  editandoId=id;
+  document.getElementById('fNombre').value=p.nombre;
+  document.getElementById('fCat').value=p.cat;
+  document.getElementById('fUnidad').value=p.unidad;
+  document.getElementById('fPrecio').value=p.precio||'';
+  document.getElementById('fBodega').value=p.bodega?'si':'no';
+  document.getElementById('fCod').value=p.cod||'';
+  document.getElementById('fStockB').value=p.stock_bodega||0;
+  document.getElementById('fStockR').value=p.stock_resta||0;
+  document.getElementById('formTitle').textContent='✏️ Editar: '+p.nombre;
+  document.getElementById('formNuevo').style.display='block';
+  document.getElementById('formNuevo').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function guardarProducto(){
+  const nombre=document.getElementById('fNombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio.');return;}
+  const btn=document.getElementById('btnGuardarProd');
+  btn.disabled=true;btn.textContent='Guardando...';
+  const datos={
+    nombre, cat:document.getElementById('fCat').value,
+    unidad:document.getElementById('fUnidad').value,
+    precio:parseFloat(document.getElementById('fPrecio').value)||0,
+    bodega:document.getElementById('fBodega').value==='si',
+    cod:document.getElementById('fCod').value.trim(),
+    stock_bodega:parseFloat(document.getElementById('fStockB').value)||0,
+    stock_resta:parseFloat(document.getElementById('fStockR').value)||0,
+    activo:true, updated_at:new Date().toISOString()
+  };
+  try{
+    if(editandoId){ await sbPatch('catalogo',`?id=eq.${editandoId}`,datos); }
+    else{ await sbPost('catalogo',datos); }
+    toggleForm();
+    await cargarCatalogo();
+  }catch(e){alert('Error al guardar: '+e.message);}
+  btn.disabled=false;btn.textContent='Guardar';
+}
+
+async function eliminarProducto(id){
+  const p=catalogo.find(x=>x.id===id);if(!p)return;
+  if(confirm(`¿Eliminar "${p.nombre}"?\nSe quitará del catálogo y del corte.`)){
+    try{
+      await sbPatch('catalogo',`?id=eq.${id}`,{activo:false});
+      await cargarCatalogo();
+    }catch(e){alert('Error: '+e.message);}
+  }
+}
+
+// ── CORTE ─────────────────────────────────────────────────────────────────────
+async function cargarCorte(){
+  fechaCorte = document.getElementById('fechaSel').value || todayStr();
+  document.getElementById('cFecha').textContent = new Date(fechaCorte+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('corteTabla').innerHTML='<div class="loader">⏳ Cargando...</div>';
+
+  try{
+    // Cargar registros de corte de esta fecha
+    const registros = await sbGet('cortes',`?fecha=eq.${fechaCorte}&select=*`) || [];
+    corteHoy = {};
+    registros.forEach(r=>{ corteHoy[r.producto_id]={stock_resta:r.stock_resta,vendido:r.vendido,tiene:r.tiene||''}; });
+
+    // Para productos sin registro hoy: tomar queda del último corte anterior como punto de partida
+    const sinRegistro = catalogo.filter(p=>p.activo!==false && !corteHoy[p.id]);
+    if(sinRegistro.length > 0){
+      const ultimos = await sbGet('cortes',`?fecha=lt.${fechaCorte}&order=fecha.desc&limit=1&select=fecha`) || [];
+      if(ultimos.length > 0){
+        const fechaAnt = ultimos[0].fecha;
+        const cortesAnt = await sbGet('cortes',`?fecha=eq.${fechaAnt}&select=producto_id,queda`) || [];
+        const quedaAnt = {};
+        cortesAnt.forEach(r=>{ quedaAnt[r.producto_id]=r.queda; });
+        sinRegistro.forEach(p=>{
+          corteHoy[p.id]={stock_resta: quedaAnt[p.id]!==undefined ? quedaAnt[p.id] : p.stock_resta, vendido:0, tiene:''};
+        });
+      } else {
+        sinRegistro.forEach(p=>{ corteHoy[p.id]={stock_resta:p.stock_resta, vendido:0, tiene:''}; });
+      }
+    }
+
+    rCorteStats();rCorteTabla();
+  }catch(e){
+    document.getElementById('corteTabla').innerHTML=`<div class="alert">Error: ${e.message}</div>`;
+  }
+}
+
+function rCorteStats(){
+  const activos=catalogo.filter(p=>p.activo!==false);
+  const tv=activos.reduce((s,p)=>s+r((corteHoy[p.id]||{}).vendido||0),0);
+  const cd=activos.filter(p=>{
+    const c=corteHoy[p.id];if(!c)return false;
+    const d=diff(queda(c.stock_resta,c.vendido),c.tiene);
+    return d!==null&&d>0;
+  });
+  const monto=cd.reduce((s,p)=>{
+    const c=corteHoy[p.id];
+    const d=diff(queda(c.stock_resta,c.vendido),c.tiene);
+    return s+Math.abs(d||0)*r(p.precio||0);
+  },0);
+  document.getElementById('cStats').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Total vendido</div><div class="stat-val">${f(tv)}</div></div>
+    <div class="stat"><div class="stat-lbl">Con faltante</div><div class="stat-val" style="color:${cd.length?'var(--red)':'var(--green)'}">${cd.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Monto dif.</div><div class="stat-val" style="color:var(--red)">$${Math.round(monto).toLocaleString('es-MX')}</div></div>`;
+  document.getElementById('cAlert').innerHTML = cd.length
+    ? `<div class="alert">⚠️ Faltantes: ${cd.map(p=>p.nombre).join(', ')}</div>`
+    : '<div class="ok-bar">✓ Sin diferencias anotadas</div>';
+}
+
+function rCorteTabla(){
+  const grupos={};CATS_ORDER.forEach(c=>grupos[c]=[]);
+  catalogo.filter(p=>p.activo!==false).forEach(p=>{(grupos[p.cat]=grupos[p.cat]||[]).push(p);});
+  let html='';
+  CATS_ORDER.forEach(cat=>{
+    const prods=grupos[cat]||[];if(!prods.length)return;
+    html+=`<div class="tbl-wrap"><table>
+      <thead><tr><th>${cat}</th><th style="background:rgba(96,165,250,0.08);color:var(--blue)">Restaurante ✏️</th><th style="background:var(--amberbg)">Vendido ✏️</th><th>Queda</th><th style="color:var(--text3)">Tiene (opc.)</th><th>Diferencia</th></tr></thead>
+      <tbody>`;
+    prods.forEach(p=>{
+      const c=corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
+      const q=queda(c.stock_resta,c.vendido);
+      const d=diff(q,c.tiene);
+      const dc=d===null?'dz':d>0?'dp':d<0?'dn':'dz';
+      const dt=d===null?'—':d>0?`+${f(d)} ⚠️`:d===0?'✓':f(d);
+      html+=`<tr>
+        <td>${p.nombre}</td>
+        <td style="background:rgba(96,165,250,0.06)"><input class="inp inp-sm" type="number" inputmode="decimal" value="${c.stock_resta||''}" placeholder="0" onchange="updSR(${p.id},this.value)" onfocus="this.select()" style="border-color:rgba(96,165,250,.3)"></td>
+        <td style="background:var(--amberbg)"><input class="inp inp-sm inp-warn" type="number" inputmode="decimal" value="${c.vendido||''}" placeholder="0" onchange="updV(${p.id},this.value)" onfocus="this.select()"></td>
+        <td style="font-weight:600" id="q_${p.id}">${f(q)}</td>
+        <td><input class="inp inp-sm" type="number" inputmode="decimal" value="${c.tiene||''}" placeholder="—" onchange="updT(${p.id},this.value)" onfocus="this.select()"></td>
+        <td><span class="${dc}" id="d_${p.id}">${dt}</span></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  });
+  document.getElementById('corteTabla').innerHTML=html||'<div style="color:var(--text2);padding:20px">Sin productos en catálogo.</div>';
+}
+
+function _dispararAutoGuardado(){
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(async ()=>{
+    const tieneData = Object.values(corteHoy).some(c=>r(c.stock_resta)>0||r(c.vendido)>0);
+    if(tieneData){
+      try{
+        await autoGuardarCorte();
+      }catch(e){
+        mostrarToast('❌ Error guardando — revisa conexión','error',4000);
+      }
+    }
+  }, 1200);
+}
+function updSR(id,val){
+  if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
+  corteHoy[id].stock_resta=r(val);
+  actualizarFila(id);rCorteStats();
+  _dispararAutoGuardado();
+}
+function updV(id,val){
+  if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
+  corteHoy[id].vendido=r(val);
+  actualizarFila(id);rCorteStats();
+  _dispararAutoGuardado();
+}
+function updT(id,val){
+  if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
+  corteHoy[id].tiene=val;
+  actualizarFila(id);rCorteStats();
+  _dispararAutoGuardado();
+}
+function actualizarFila(id){
+  const c=corteHoy[id];if(!c)return;
+  const q=queda(c.stock_resta,c.vendido);
+  const d=diff(q,c.tiene);
+  const qEl=document.getElementById('q_'+id);
+  const dEl=document.getElementById('d_'+id);
+  if(qEl)qEl.textContent=f(q);
+  if(dEl){
+    dEl.className=d===null?'dz':d>0?'dp':d<0?'dn':'dz';
+    dEl.textContent=d===null?'—':d>0?`+${f(d)} ⚠️`:d===0?'✓':f(d);
+  }
+}
+
+async function guardarCorte(){
+  // Usar autoGuardarCorte y quedarse en la misma sección (no te manda a inicio)
+  const btn=document.getElementById('btnGuardarCorte');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    await autoGuardarCorte();
+    await cargarCatalogo();
+    const cd=catalogo.filter(p=>p.activo!==false).filter(p=>{const c=corteHoy[p.id];if(!c)return false;const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;});
+    const monto=cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0);
+    btn.textContent='✅ Guardado';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='Guardar corte del día'; },2000);
+    // Mostrar toast discreto en lugar de alert bloqueante
+    mostrarToast(`✅ Guardado — ${fechaCorte} · ${cd.length} diferencia(s)${monto>0?' · $'+Math.round(monto).toLocaleString('es-MX'):''}`);
+  }catch(e){
+    alert('Error al guardar: '+e.message);
+    btn.disabled=false;btn.textContent='Guardar corte del día';
+  }
+}
+
+function mostrarToast(msg, tipo='ok', duracion=3000){
+  let t=document.getElementById('_toast');
+  if(!t){
+    t=document.createElement('div');
+    t.id='_toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a1a;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  const esError = tipo==='error';
+  t.style.border = esError ? '1px solid rgba(248,113,113,.4)' : '1px solid rgba(74,222,128,.3)';
+  t.style.color  = esError ? '#f87171' : '#4ade80';
+  t.textContent=msg;
+  t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{ t.style.opacity='0'; },duracion);
+}
+
+// ── BODEGA ────────────────────────────────────────────────────────────────────
+// Nombres de productos que SIEMPRE van a porcionar (aunque no estén en localStorage)
+const NOMBRES_PORCIONAR = ['picaña','arrachera','pulpo','camarón','camaron','pieza basica','pieza básica','filete','salmon','salmón','mollejas','lengua'];
+
+function esProductoPorcionar(nombre){
+  const n = (nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return NOMBRES_PORCIONAR.some(k => {
+    const kn = k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return n.includes(kn);
+  });
+}
+
+// porcionar[prodId] = true/false sobrescribe el default por nombre
+// Se guarda en localStorage para que el usuario pueda cambiar manualmente
+let _porcionarOverride = JSON.parse(localStorage.getItem('porcionar_prods')||'{}');
+
+// Proxy para que porcionar[id] use el default por nombre si no hay override manual
+const porcionar = new Proxy({}, {
+  get(target, id){
+    if(id in _porcionarOverride) return _porcionarOverride[id];
+    const p = catalogo.find(x=>x.id==id);
+    return p ? esProductoPorcionar(p.nombre) : false;
+  },
+  set(target, id, val){ _porcionarOverride[id]=val; return true; }
+});
+
+function togglePorcionar(id){
+  const actual = porcionar[id];
+  _porcionarOverride[id] = !actual;
+  localStorage.setItem('porcionar_prods', JSON.stringify(_porcionarOverride));
+  rBodega();
+}
+
+function rBodega(){
+  const bp=catalogo.filter(p=>p.bodega&&p.activo!==false);
+  const ts=bp.reduce((s,p)=>s+r(p.stock_bodega),0);
+  const tr=bp.filter(p=>r(p._req||0)>0).length;
+  document.getElementById('bStats').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Total bodega</div><div class="stat-val" style="color:var(--green)">${f(ts)}</div></div>
+    <div class="stat"><div class="stat-lbl">A transferir</div><div class="stat-val" style="color:var(--amber)">${tr}</div></div>
+    <div class="stat"><div class="stat-lbl">En bodega</div><div class="stat-val">${bp.length} prods</div></div>`;
+  document.getElementById('bTbody').innerHTML=bp.map(p=>{
+    const req=r(p._req||0);
+    const ex=Math.max(0,r(p.stock_bodega)-req);
+    const necesitaPorc=!!porcionar[p.id];
+    return`<tr>
+      <td>
+        ${p.nombre}
+        ${p.cod?`<div style="font-size:11px;color:var(--text3)">${p.cod}</div>`:''}
+      </td>
+      <td style="font-weight:600">${f(p.stock_bodega)}</td>
+      <td style="background:var(--amberbg)"><input class="inp inp-sm inp-warn" type="number" inputmode="decimal" value="${req||''}" placeholder="0" onchange="updR(${p.id},this.value)" onfocus="this.select()"></td>
+      <td style="color:${ex<2&&r(p.stock_bodega)>0?'var(--red)':'var(--text2)'}">${f(ex)}</td>
+      <td style="text-align:center">
+        <button class="tog-porc ${necesitaPorc?'tog-porcionar':'tog-directo'}" onclick="togglePorcionar(${p.id})">
+          ${necesitaPorc?'⚙️ Porcionar':'→ Directo'}
+        </button>
+      </td>
+      <td style="color:var(--text3)">${p.precio?'$'+p.precio:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updR(id,val){
+  const p=catalogo.find(x=>x.id===id);if(p){p._req=r(val);}
+  rBodega();
+}
+
+async function confirmarTransf(){
+  const tr=catalogo.filter(p=>p.bodega&&r(p._req||0)>0);
+  if(!tr.length){alert('No hay productos marcados para transferir.');return;}
+
+  const directos=tr.filter(p=>!porcionar[p.id]);
+  const aPorc=tr.filter(p=>!!porcionar[p.id]);
+
+  let msg='';
+  if(directos.length) msg+=`TRASPASO DIRECTO al restaurante:\n${directos.map(p=>`• ${p.nombre}: ${f(p._req)} ${p.unidad}`).join('\n')}\n`;
+  if(aPorc.length) msg+=`\nPIEZAS A PORCIONAR (se descuentan de bodega pero esperan porcionado):\n${aPorc.map(p=>`• ${p.nombre}: ${f(p._req)} ${p.unidad}`).join('\n')}\n`;
+
+  if(!confirm(msg+'\n¿Confirmar?')) return;
+  try{
+    // DIRECTOS: descuenta bodega + suma restaurante (como antes)
+    for(const p of directos){
+      const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
+      const nr=r(p.stock_resta)+r(p._req);
+      await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,stock_resta:nr,updated_at:new Date().toISOString()});
+      await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:r(p._req),nota:'directo'});
+      p.stock_bodega=nb; p.stock_resta=nr; p._req=0;
+    }
+    // PORCIONAR: solo descuenta bodega, guarda en porcionado_pendiente, NO toca stock_resta
+    for(const p of aPorc){
+      const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
+      await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,updated_at:new Date().toISOString()});
+      await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:r(p._req),nota:'porcionar'});
+      await sbPost('porcionado_pendiente',{
+        fecha:todayStr(), producto_id:p.id,
+        producto_nombre:p.nombre, cantidad:r(p._req),
+        unidad:p.unidad, status:'pendiente'
+      });
+      p.stock_bodega=nb; p._req=0;
+    }
+    const msg2=aPorc.length
+      ? `✅ Transferencia confirmada.\n\n${directos.length} producto(s) directo(s) al restaurante.\n${aPorc.length} pieza(s) en espera de porcionado — ve a la pestaña 🔪 Porcionar.`
+      : '✅ Transferencia confirmada. El stock del Restaurante ya se actualizó.';
+    alert(msg2);
+    await cargarCatalogo();
+    rBodega();
+    if(aPorc.length) goTo('porcionar');
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// ── DIFERENCIAS ───────────────────────────────────────────────────────────────
+async function rDiffs(){
+  // diferencias de hoy
+  const activos=catalogo.filter(p=>p.activo!==false);
+  const cd=activos.filter(p=>{
+    const c=corteHoy[p.id];if(!c)return false;
+    const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;
+  });
+  if(cd.length){
+    const mf=Math.round(cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0));
+    document.getElementById('diffsHoy').innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:12px">⚠️ Diferencias — ${fechaCorte}</div>
+      ${cd.map(p=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);const m=Math.round(Math.abs(d||0)*r(p.precio||0));return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${p.nombre}</span><div style="display:flex;gap:12px"><span class="${d>0?'dp':'dn'}">${d>0?'Faltante':'Sobrante'} ${Math.abs(f(d))} ${p.unidad}</span><span style="color:var(--text3)">~$${m}</span></div></div>`;}).join('')}
+      <div style="padding-top:10px;display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Total estimado</span><span style="color:var(--red);font-weight:700">$${mf.toLocaleString('es-MX')}</span></div>
+    </div>`;
+  }else{
+    document.getElementById('diffsHoy').innerHTML='<div class="ok-bar" style="margin-bottom:14px">✓ Sin diferencias en el corte de hoy</div>';
+  }
+  // historial
+  try{
+    const hist=await sbGet('historial','?order=fecha.desc&limit=30')||[];
+    const tm=hist.reduce((s,h)=>s+r(h.monto_total)-r(h.monto_favor),0);
+    document.getElementById('diffsHist').innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;display:flex;justify-content:space-between">
+        <div><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Acumulado del mes</div><div style="font-size:24px;font-weight:600;color:var(--red)">$${tm.toLocaleString('es-MX')}</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Días con cargo</div><div style="font-size:24px;font-weight:600">${hist.filter(h=>h.num_diferencias>0).length}</div></div>
+      </div>
+      ${hist.map(h=>{const f2=new Date(h.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});return`<div class="hist-item"><div><div style="font-weight:600;font-size:13px">${f2}</div><div style="font-size:11px;color:var(--text2);margin-top:2px">${h.num_diferencias} diferencias</div></div><div style="text-align:right">${r(h.monto_total)>0?`<div style="color:var(--red);font-weight:600">$${Math.round(h.monto_total).toLocaleString('es-MX')}</div>`:'<div style="color:var(--green);font-weight:600">✓ Sin cargo</div>'}</div></div>`;}).join('')}`;
+  }catch(e){document.getElementById('diffsHist').innerHTML=`<div class="alert">Error: ${e.message}</div>`;}
+}
+
+// ── PORCIONADO ────────────────────────────────────────────────────────────────
+const _porcionadosPendientes = new Set();
+let porcionandoId = null;
+let salidasTemp   = [];
+
+// ── MAPA DE PORCIONADO ────────────────────────────────────────────────────────
+// Para cada pieza base, qué productos finales pueden salir
+const PORCIONADO_MAP = [
+  { src:'pieza basica rib eye cab',  salidas:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye'] },
+  { src:'pieza basica rib eye nac',  salidas:['Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye'] },
+  { src:'pieza basica rib eye',      salidas:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye'] },
+  { src:'pieza basica vacio',        salidas:['Vacío','Flap Meat'] },
+  { src:'pieza basica new york',     salidas:['New York'] },
+  { src:'pieza basica',              salidas:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye'] },
+  { src:'arrachera',                 salidas:['Arrachera','Arrachera gramaje','Tacos de Arrachera'] },
+  { src:'camaron chico',             salidas:['Camarón chico'] },
+  { src:'camaron grande',            salidas:['Camarón grande'] },
+  { src:'camaron',                   salidas:['Camarón grande','Camarón chico'] },
+  { src:'pulpo',                     salidas:['Pulpo','Tacos de pulpo'] },
+  { src:'salmon',                    salidas:['Salmón'] },
+  { src:'picana',                    salidas:['Picaña','Tacos de Picaña'] },
+  { src:'picaña',                    salidas:['Picaña','Tacos de Picaña'] },
+  { src:'filete cab',                salidas:['Filete corte','Filete Tacos CAB'] },
+  { src:'filete nacional',           salidas:['Filete Volcán Nacional','Filete Tacos CAB'] },
+  { src:'filete',                    salidas:['Filete corte','Filete Tacos CAB','Filete Volcán Nacional'] },
+  { src:'lengua',                    salidas:['Lengua a la veracruzana','Tacos Lengua'] },
+  { src:'molleja',                   salidas:['Mollejas'] },
+  { src:'hamburguesa',               salidas:['Hamburguesas Los Pares'] },
+  { src:'pollo',                     salidas:['Pechugas de pollo','Ensaladas','Caldo de pollo'] },
+  { src:'tuetano',                   salidas:['Tuétano'] },
+  { src:'papa',                      salidas:['Papas gajo'] },
+  { src:'bolonesa',                  salidas:['Boloñesa'] },
+  { src:'boloñesa',                  salidas:['Boloñesa'] },
+];
+
+function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+function getSalidasEsperadas(nombreFuente){
+  const n = norm(nombreFuente);
+  const entrada = PORCIONADO_MAP
+    .filter(m => n.includes(norm(m.src)))
+    .sort((a,b) => b.src.length - a.src.length)[0];
+  if(!entrada) return [];
+  const resultado = [];
+  entrada.salidas.forEach(salLabel => {
+    const nl = norm(salLabel);
+    const prod = catalogo.find(p => p.activo!==false && norm(p.nombre).includes(nl.split(' ')[0]) && nl.split(' ').every(w=>norm(p.nombre).includes(w)||w.length<=2));
+    const prodAlt = !prod ? catalogo.find(p => p.activo!==false && nl.split(' ').some(w=>w.length>3&&norm(p.nombre).includes(w))) : null;
+    const match = prod || prodAlt;
+    if(match){
+      if(!resultado.find(r=>r.id===match.id))
+        resultado.push({id:match.id, nombre:match.nombre, unidad:match.unidad, cantidad:'', esperada:true});
+    } else {
+      resultado.push({id:null, nombre:salLabel, unidad:'piezas', cantidad:'', esperada:true, sinCatalogo:true});
+    }
+  });
+  return resultado;
+}
+
+
+async function rPorcionado(){
+  document.getElementById('porcionarLista').innerHTML='<div class="loader">⏳ Cargando piezas pendientes...</div>';
+  try{
+    const lista = await sbGet('porcionado_pendiente','?status=eq.pendiente&order=created_at.desc') || [];
+    if(!lista.length){
+      document.getElementById('porcionarLista').innerHTML=`
+        <div class="ok-bar">✅ No hay piezas pendientes de porcionar.</div>
+        <div style="color:var(--text2);text-align:center;padding:20px;font-size:13px">
+          Cuando hagas un traspaso con tipo ⚙️ Porcionar, las piezas aparecerán aquí.
+        </div>`;
+      return;
+    }
+
+    let html='';
+    lista.forEach(item=>{
+      const esperadas = getSalidasEsperadas(item.producto_nombre);
+      // Inicializar salidasPorItem con las salidas esperadas
+      if(!salidasPorItem[item.id]){
+        salidasPorItem[item.id] = esperadas.map(e=>({...e}));
+      }
+
+      html+=`
+      <div style="background:var(--bg2);border:1.5px solid var(--amber);border-radius:var(--radius);margin-bottom:14px;overflow:hidden">
+        <div style="background:var(--amberbg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--amber)">⚙️ ${item.producto_nombre}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">
+              ${item.cantidad} ${item.unidad} · ${new Date(item.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}
+              · <span style="color:var(--amber)">${esperadas.length} productos esperados</span>
+            </div>
+          </div>
+          <button class="btn btn-gold" onclick="toggleFormPorcionar(${item.id})">
+            Registrar porcionado →
+          </button>
+        </div>
+
+        <div id="formPorc_${item.id}" style="display:none;padding:16px">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+            Llena las cantidades que salieron de <b style="color:var(--text)">${item.cantidad} ${item.unidad} de ${item.producto_nombre}</b>.
+            Deja en 0 lo que no aplique.
+          </div>
+
+          <!-- SALIDAS ESPERADAS -->
+          <div id="salidasList_${item.id}"></div>
+
+          <!-- AGREGAR PRODUCTO EXTRA -->
+          <div style="background:var(--bg3);border-radius:var(--rsm);padding:12px;margin-bottom:12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">+ Agregar producto no listado</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select class="inp" id="selExtra_${item.id}" style="flex:2;min-width:140px">
+                ${catalogo.filter(p=>p.activo!==false).map(p=>`<option value="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">${p.nombre} (${p.unidad})</option>`).join('')}
+              </select>
+              <input class="inp" type="number" inputmode="decimal" id="cantExtra_${item.id}" placeholder="Cant." style="flex:1;min-width:80px;max-width:110px" onfocus="this.select()">
+              <button class="btn" onclick="agregarSalidaExtra(${item.id})">+</button>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" onclick="toggleFormPorcionar(${item.id})">Cancelar</button>
+            <button class="btn btn-gold" onclick="confirmarPorcionado(${item.id})">✓ Confirmar y sumar al restaurante</button>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    // Procesados recientes
+    const procesados = await sbGet('porcionado_pendiente','?status=eq.procesado&order=created_at.desc&limit=10') || [];
+    if(procesados.length){
+      html+=`<div class="sec-hdr">Porcionados recientes</div>`;
+      procesados.forEach(item=>{
+        html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:13px">
+          <span style="color:var(--text2)">✓ ${item.producto_nombre} — ${item.cantidad} ${item.unidad}</span>
+          <span style="font-size:11px;color:var(--text3)">${new Date(item.created_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>
+        </div>`;
+      });
+    }
+
+    document.getElementById('porcionarLista').innerHTML=html;
+
+    // Renderizar listas de salidas
+    lista.forEach(item=>{ renderSalidasList(item.id); });
+
+  }catch(e){
+    document.getElementById('porcionarLista').innerHTML=`<div class="alert">⚠️ Error: ${e.message}<br><br>Si acabas de crear la tabla, recarga la página.</div>`;
+  }
+}
+
+// Toggle mostrar/ocultar el formulario de porcionado
+function toggleFormPorcionar(itemId){
+  const el = document.getElementById('formPorc_'+itemId);
+  const visible = el.style.display!=='none';
+  el.style.display = visible ? 'none' : 'block';
+  if(!visible) renderSalidasList(itemId);
+}
+
+// Renderiza la lista de salidas (predefinidas + extras) con inputs de cantidad
+function renderSalidasList(itemId){
+  const lista = salidasPorItem[itemId] || [];
+  const el = document.getElementById('salidasList_'+itemId);
+  if(!el) return;
+
+  if(!lista.length){
+    el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0">Sin productos esperados — usa el campo de abajo para agregar.</div>';
+    return;
+  }
+
+  el.innerHTML = lista.map((s,i)=>{
+    const esExtra = !s.esperada;
+    const bgColor = esExtra ? 'var(--bg3)' : 'var(--bg2)';
+    const label   = esExtra ? `<span style="font-size:10px;color:var(--text3);margin-left:4px">(extra)</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${bgColor};border-radius:var(--rsm);margin-bottom:6px;flex-wrap:wrap">
+      <div style="flex:2;min-width:120px;font-size:13px;font-weight:500">${s.nombre}${label}${s.sinCatalogo?'<span style="font-size:10px;color:var(--red);margin-left:4px">⚠️ no en catálogo</span>':''}</div>
+      <input class="inp inp-sm" type="number" inputmode="decimal" min="0" step="0.5"
+        value="${s.cantidad||''}" placeholder="0 ${s.unidad}"
+        style="width:100px;text-align:right"
+        onfocus="this.select()"
+        onchange="actualizarCantidadSalida(${itemId},${i},this.value)">
+      <span style="font-size:11px;color:var(--text2);flex-shrink:0">${s.unidad}</span>
+      ${esExtra?`<button onclick="quitarSalidaExtra(${itemId},${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;line-height:1">✕</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function actualizarCantidadSalida(itemId, idx, val){
+  if(salidasPorItem[itemId] && salidasPorItem[itemId][idx]){
+    salidasPorItem[itemId][idx].cantidad = parseFloat(val)||0;
+  }
+}
+
+function agregarSalidaExtra(itemId){
+  const sel = document.getElementById('selExtra_'+itemId);
+  const cant = parseFloat(document.getElementById('cantExtra_'+itemId).value);
+  if(!cant||cant<=0){ alert('Escribe una cantidad válida.'); return; }
+  const opt = sel.options[sel.selectedIndex];
+  const prodId = parseInt(sel.value);
+  const nombre = opt.getAttribute('data-nombre');
+  const unidad = opt.getAttribute('data-unidad');
+  if(!salidasPorItem[itemId]) salidasPorItem[itemId]=[];
+  // No duplicar
+  const exist = salidasPorItem[itemId].find(s=>s.id===prodId);
+  if(exist){ exist.cantidad = r((exist.cantidad||0)+cant); }
+  else { salidasPorItem[itemId].push({id:prodId, nombre, unidad, cantidad:cant, esperada:false}); }
+  document.getElementById('cantExtra_'+itemId).value='';
+  renderSalidasList(itemId);
+}
+
+function quitarSalidaExtra(itemId, idx){
+  salidasPorItem[itemId].splice(idx,1);
+  renderSalidasList(itemId);
+}
+
+// Mantener compatibilidad con código antiguo
+function abrirFormPorcionar(itemId){ toggleFormPorcionar(itemId); }
+function cerrarFormPorcionar(itemId){ toggleFormPorcionar(itemId); }
+function agregarSalida(itemId){ agregarSalidaExtra(itemId); }
+function quitarSalida(itemId, prodId){ const idx=(salidasPorItem[itemId]||[]).findIndex(s=>s.id===prodId||s.producto_id===prodId);if(idx>=0)salidasPorItem[itemId].splice(idx,1);renderSalidasList(itemId); }
+
+async function confirmarPorcionado(itemId){
+  const todas = salidasPorItem[itemId] || [];
+  // Solo las que tienen cantidad > 0
+  const salidas = todas.filter(s=>(parseFloat(s.cantidad)||0)>0);
+  if(!salidas.length){ alert('Llena la cantidad de al menos un producto antes de confirmar.'); return; }
+
+  const resumen = salidas.map(s=>`• ${s.nombre}: ${f(parseFloat(s.cantidad))} ${s.unidad}`).join('\n');
+  if(!confirm(`Confirmar porcionado:\n\n${resumen}\n\n¿Se suman al stock del restaurante?`)) return;
+
+  try{
+    for(const s of salidas){
+      if(s.sinCatalogo){
+        // No está en catálogo — solo notificar
+        mostrarToast(`⚠️ "${s.nombre}" no está en catálogo — agrégalo primero`, 'error', 4000);
+        continue;
+      }
+      const prod = catalogo.find(p=>p.id===(s.id||s.producto_id));
+      const nuevo = r((prod?.stock_resta||0) + parseFloat(s.cantidad));
+      await sbPatch('catalogo',`?id=eq.${s.id||s.producto_id}`,{stock_resta:nuevo,updated_at:new Date().toISOString()});
+      if(prod) prod.stock_resta = nuevo;
+    }
+    await sbPatch('porcionado_pendiente',`?id=eq.${itemId}`,{status:'procesado'});
+    delete salidasPorItem[itemId];
+    mostrarToast('✅ Porcionado confirmado. Los productos ya están en el stock del restaurante.');
+    await rPorcionado();
+    await rDash();
+    if(document.getElementById('screen-corte').classList.contains('active')) rCorteTabla();
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+let salidasPorItem = {};
+
+// ── IMPRIMIR SECCIÓN ──────────────────────────────────────────────────────────
+// En PC: abre ventana nueva y lanza print automático
+// En Android/iOS: abre pestaña limpia → el usuario usa menú del navegador → Imprimir / Guardar PDF / Compartir
+function imprimirSeccion(id){
+  const fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const titulos = {
+    catalogo: `Catálogo de productos · ${fecha}`,
+    corte:    `Corte del día · ${document.getElementById('cFecha').textContent}`,
+    bodega:   `Bodega (Casa) · ${fecha}`,
+    diffs:    `Diferencias & Cargos · ${fecha}`,
+  };
+
+  let body = '';
+
+  if(id==='catalogo'){
+    const grupos={};
+    CATS_ORDER.forEach(c=>grupos[c]=[]);
+    catalogo.filter(p=>p.activo!==false).forEach(p=>{(grupos[p.cat]=grupos[p.cat]||[]).push(p);});
+    CATS_ORDER.forEach(cat=>{
+      const prods=grupos[cat]||[];if(!prods.length)return;
+      body+=`<div class="section"><div class="section-hdr">${cat}</div>
+        <table><thead><tr><th>Producto</th><th>Unidad</th><th>Bodega</th><th>Restaurante</th><th>Precio</th></tr></thead><tbody>`;
+      prods.forEach(p=>{
+        body+=`<tr><td><b>${p.nombre}</b>${p.cod?`<br><small>${p.cod}</small>`:''}</td><td>${p.unidad}</td><td>${f(p.stock_bodega)}</td><td>${f(p.stock_resta)}</td><td>${p.precio?'$'+p.precio:'—'}</td></tr>`;
+      });
+      body+=`</tbody></table></div>`;
+    });
+  }
+
+  else if(id==='corte'){
+    const activos=catalogo.filter(p=>p.activo!==false);
+    const tv=activos.reduce((s,p)=>s+r((corteHoy[p.id]||{}).vendido||0),0);
+    const cd=activos.filter(p=>{const c=corteHoy[p.id];if(!c)return false;const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;});
+    const monto=Math.round(cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0));
+    body+=`<div class="stats-row">
+      <div class="stat-box"><div class="lbl">Total vendido</div><div class="val">${f(tv)}</div></div>
+      <div class="stat-box"><div class="lbl">Diferencias</div><div class="val" style="color:${cd.length?'#c00':'#060'}">${cd.length}</div></div>
+      <div class="stat-box"><div class="lbl">Monto diferencias</div><div class="val" style="color:#c00">$${monto.toLocaleString('es-MX')}</div></div>
+    </div>`;
+    const grupos={};CATS_ORDER.forEach(c=>grupos[c]=[]);
+    activos.forEach(p=>{(grupos[p.cat]=grupos[p.cat]||[]).push(p);});
+    CATS_ORDER.forEach(cat=>{
+      const prods=grupos[cat]||[];if(!prods.length)return;
+      body+=`<div class="section"><div class="section-hdr">${cat}</div>
+        <table><thead><tr><th>Producto</th><th>Restaurante</th><th>Vendido</th><th>Queda</th><th>Tiene</th><th>Diferencia</th></tr></thead><tbody>`;
+      prods.forEach(p=>{
+        const c=corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
+        const q=queda(c.stock_resta,c.vendido);
+        const d=diff(q,c.tiene);
+        const dTxt=d===null?'—':d>0?`+${f(d)} ⚠️`:d===0?'✓':f(d);
+        const dStyle=d!==null&&d>0?'color:#c00;font-weight:700':d!==null&&d<0?'color:#060;font-weight:700':'';
+        body+=`<tr><td>${p.nombre}</td><td>${f(c.stock_resta)}</td><td>${f(c.vendido)}</td><td><b>${f(q)}</b></td><td>${c.tiene||'—'}</td><td style="${dStyle}">${dTxt}</td></tr>`;
+      });
+      body+=`</tbody></table></div>`;
+    });
+  }
+
+  else if(id==='bodega'){
+    const bp=catalogo.filter(p=>p.bodega&&p.activo!==false);
+    const haPorc=bp.some(p=>porcionar[p.id]);
+    if(haPorc) body+=`<div class="nota">⚙️ Productos marcados "Porcionar": se procesan en cocina antes de pasar al restaurante.</div>`;
+    body+=`<div class="section"><div class="section-hdr">Stock en bodega</div>
+      <table><thead><tr><th>Producto</th><th>Código</th><th>En casa</th><th>Requerido</th><th>Quedan</th><th>Traspaso</th><th>$/u</th></tr></thead><tbody>`;
+    bp.forEach(p=>{
+      const req=r(p._req||0);const ex=Math.max(0,r(p.stock_bodega)-req);
+      body+=`<tr><td><b>${p.nombre}</b></td><td style="color:#888">${p.cod||'—'}</td><td>${f(p.stock_bodega)}</td><td><b>${req||'—'}</b></td><td style="${ex<2&&r(p.stock_bodega)>0?'color:#c00':''}">${f(ex)}</td><td>${porcionar[p.id]?'⚙️ Porcionar':'→ Directo'}</td><td>${p.precio?'$'+p.precio:'—'}</td></tr>`;
+    });
+    body+=`</tbody></table></div>`;
+  }
+
+  else if(id==='diffs'){
+    const activos=catalogo.filter(p=>p.activo!==false);
+    const cd=activos.filter(p=>{const c=corteHoy[p.id];if(!c)return false;const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;});
+    if(cd.length){
+      const mf=Math.round(cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0));
+      body+=`<div class="section"><div class="section-hdr">Diferencias del día</div>
+        <table><thead><tr><th>Producto</th><th>Diferencia</th><th>Monto estimado</th></tr></thead><tbody>`;
+      cd.forEach(p=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);const m=Math.round(Math.abs(d||0)*r(p.precio||0));
+        body+=`<tr><td>${p.nombre}</td><td style="color:#c00;font-weight:700">${d>0?'Faltante':'Sobrante'} ${Math.abs(f(d))} ${p.unidad}</td><td>~$${m.toLocaleString('es-MX')}</td></tr>`;
+      });
+      body+=`<tr style="background:#fff0f0"><td><b>Total estimado</b></td><td></td><td style="color:#c00;font-weight:700"><b>$${mf.toLocaleString('es-MX')}</b></td></tr>`;
+      body+=`</tbody></table></div>`;
+    } else {
+      body+=`<div class="nota" style="background:#f0fff4;border-color:#86efac;color:#14532d">✓ Sin diferencias en el corte de hoy</div>`;
+    }
+    // historial del mes
+    try{
+      const items=document.querySelectorAll('#diffsHist .hist-item');
+      if(items.length){
+        body+=`<div class="section"><div class="section-hdr">Historial del mes</div><table><thead><tr><th>Fecha</th><th>Diferencias</th><th>Monto</th></tr></thead><tbody>`;
+        items.forEach(item=>{
+          const fechaEl=item.querySelector('[style*="font-weight:600"]');
+          const montoEl=item.querySelector('[style*="red"],[style*="green"]');
+          const diaEl=item.querySelector('[style*="color:var(--text2)"]');
+          body+=`<tr><td>${fechaEl?.textContent||''}</td><td>${diaEl?.textContent||''}</td><td>${montoEl?.textContent||'✓ Sin cargo'}</td></tr>`;
+        });
+        body+=`</tbody></table></div>`;
+      }
+    }catch(e){}
+  }
+
+  // HTML completo auto-contenido para nueva pestaña
+  const html = `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Los Pares 84×88 — ${titulos[id]||id}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;padding:20px;max-width:900px;margin:0 auto}
+  h1{font-size:16px;font-weight:700;text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:18px}
+  .section{margin-bottom:16px;border:1px solid #ccc;border-radius:4px;overflow:hidden}
+  .section-hdr{background:#eee;padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #ccc}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f5f5f5;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #ccc;color:#444}
+  td{padding:7px 8px;border-bottom:1px solid #eee;font-size:12px;vertical-align:middle}
+  td small{font-size:10px;color:#888;display:block}
+  tr:last-child td{border-bottom:none}
+  .stats-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .stat-box{border:1px solid #ddd;border-radius:4px;padding:10px 16px;flex:1;min-width:120px}
+  .stat-box .lbl{font-size:10px;text-transform:uppercase;color:#666;margin-bottom:4px}
+  .stat-box .val{font-size:20px;font-weight:700}
+  .nota{background:#fff8e1;border:1px solid #f0c030;border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#7a5c00}
+  .print-btn{display:block;width:100%;padding:14px;background:#e2b96a;color:#000;font-size:15px;font-weight:700;border:none;border-radius:6px;cursor:pointer;margin-bottom:20px;text-align:center}
+  @media print{.print-btn{display:none}}
+</style>
+</head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+<h1>LOS PARES 84×88 — ${titulos[id]||id}</h1>
+${body}
+</body></html>`;
+
+  // Abrir en nueva pestaña con Blob URL (funciona en Android y iOS)
+  try{
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 10000);
+  }catch(e){
+    // Fallback: ventana nueva directa
+    const win = window.open('','_blank');
+    if(win){ win.document.write(html); win.document.close(); }
+    else{ alert('Activa las ventanas emergentes en tu navegador para poder imprimir.'); }
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function iniciarApp(){
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('appScreen').style.display='block';
+  document.getElementById('fechaSel').value=todayStr();
+  await checkConn();
+  await cargarCatalogo();
+  await rDash();
+  setInterval(checkConn, 30000);
+}
+
+// Arrancar
+SB_URL = localStorage.getItem('sb_url')||'';
+SB_KEY = localStorage.getItem('sb_key')||'';
+if(SB_URL && SB_KEY){ iniciarApp(); }
+else{ document.getElementById('setupScreen').style.display='block'; }
+</script>
+</body>
+</html>
