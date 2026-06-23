@@ -906,19 +906,30 @@ async function confirmarTransf(){
 
   let msg='';
   if(directos.length) msg+=`TRASPASO DIRECTO al restaurante:\n${directos.map(p=>`• ${p.nombre}: ${f(p._req)} ${p.unidad}`).join('\n')}\n`;
-  if(aPorc.length) msg+=`\nPIEZAS A PORCIONAR (se descuentan de bodega pero esperan porcionado):\n${aPorc.map(p=>`• ${p.nombre}: ${f(p._req)} ${p.unidad}`).join('\n')}\n`;
+  if(aPorc.length) msg+=`\nPIEZAS A PORCIONAR:\n${aPorc.map(p=>`• ${p.nombre}: ${f(p._req)} ${p.unidad}`).join('\n')}\n`;
 
   if(!confirm(msg+'\n¿Confirmar?')) return;
   try{
-    // DIRECTOS: descuenta bodega + suma restaurante (como antes)
+    // DIRECTOS: descuenta bodega + suma restaurante en catálogo Y en corteHoy
     for(const p of directos){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
       const nr=r(p.stock_resta)+r(p._req);
       await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,stock_resta:nr,updated_at:new Date().toISOString()});
       await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:r(p._req),nota:'directo'});
-      p.stock_bodega=nb; p.stock_resta=nr; p._req=0;
+      p.stock_bodega=nb; p.stock_resta=nr;
+      // ── NUEVO: actualizar corteHoy para que Corte refleje el nuevo stock ──
+      if(!corteHoy[p.id]) corteHoy[p.id]={stock_resta:0,vendido:0,tiene:''};
+      corteHoy[p.id].stock_resta = r(corteHoy[p.id].stock_resta + r(p._req));
+      // También actualizar el registro en Supabase cortes si existe hoy
+      try{
+        const existe = await sbGet('cortes',`?fecha=eq.${todayStr()}&producto_id=eq.${p.id}&select=id,stock_resta`);
+        if(existe && existe.length>0){
+          await sbPatch('cortes',`?fecha=eq.${todayStr()}&producto_id=eq.${p.id}`,{stock_resta:corteHoy[p.id].stock_resta});
+        }
+      }catch(e2){ console.warn('No se actualizó cortes para',p.nombre,e2.message); }
+      p._req=0;
     }
-    // PORCIONAR: solo descuenta bodega, guarda en porcionado_pendiente, NO toca stock_resta
+    // PORCIONAR: solo descuenta bodega, guarda en porcionado_pendiente
     for(const p of aPorc){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
       await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,updated_at:new Date().toISOString()});
@@ -930,12 +941,15 @@ async function confirmarTransf(){
       });
       p.stock_bodega=nb; p._req=0;
     }
+
     const msg2=aPorc.length
       ? `✅ Transferencia confirmada.\n\n${directos.length} producto(s) directo(s) al restaurante.\n${aPorc.length} pieza(s) en espera de porcionado — ve a la pestaña 🔪 Porcionar.`
       : '✅ Transferencia confirmada. El stock del Restaurante ya se actualizó.';
     alert(msg2);
     await cargarCatalogo();
     rBodega();
+    // Re-renderizar corte si está activo, para mostrar los nuevos stocks
+    if(_seccionActual==='corte') rCorteTabla();
     if(aPorc.length) goTo('porcionar');
   }catch(e){alert('Error: '+e.message);}
 }
@@ -979,39 +993,25 @@ let salidasTemp   = [];
 // ── MAPA DE PORCIONADO ────────────────────────────────────────────────────────
 // Para cada pieza base, qué productos finales pueden salir
 const PORCIONADO_MAP = [
-  // FILETE CAB → productos del grill + tacos
-  { src:'filete cab', salidas:['FILETE CAB','FILETE','TAPA DE RIB EYE','OJO DE RIB EYE','RIB EYE','CHICHARRON DE RIB EYE','RIB EYE CON QUESO','AGUACHILE DE RIB EYE'] },
-  // FILETE NACIONAL
+  { src:'filete cab',      salidas:['FILETE CAB','FILETE','TAPA DE RIB EYE','OJO DE RIB EYE','RIB EYE','CHICHARRON DE RIB EYE','RIB EYE CON QUESO','AGUACHILE DE RIB EYE'] },
   { src:'filete nacional', salidas:['FILETE','VOLCAN'] },
-  // ARRACHERA → del grill + tacos
-  { src:'arrachera', salidas:['ARRACHERA','ARRACHERA'] },
-  // PICAÑA
-  { src:'picaña', salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
-  { src:'picana', salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
-  // SALMON
-  { src:'salmon', salidas:['SALMON','SALMON PASTA'] },
-  // PULPO
-  { src:'pulpo', salidas:['PULPO','TACOS DE PULPO'] },
-  // CAMARON
-  { src:'camaron chico', salidas:['CAMARON CHICO'] },
-  { src:'camaron grande', salidas:['CAMARON GRANDE'] },
-  { src:'camaron', salidas:['CAMARON GRANDE','CAMARON CHICO'] },
-  // LENGUA
-  { src:'lengua', salidas:['LENGUA A LA VERACRUZANA','LENGUA'] },
-  // MOLLEJAS
-  { src:'molleja', salidas:['MOLLEJAS'] },
-  // COW BOY / FLAP MEAT / NEW YORK / T-BONE
-  { src:'cow boy', salidas:['COW BOY','FLAP MEAT'] },
-  { src:'flap meat', salidas:['FLAP MEAT'] },
-  { src:'new york', salidas:['NEW YORK'] },
-  { src:'t-bone', salidas:['T-BONE'] },
-  // POLLO
-  { src:'pollo', salidas:['PECHUGA DE POLLO','ENSALADAS','CALDO DE POLLO'] },
-  // HAMBURGUESA
-  { src:'hamburguesa', salidas:['HAMBURGUESAS CARNE'] },
-  // TUÉTANO / PAPAS
-  { src:'tuetano', salidas:['TUETANO'] },
-  { src:'papa', salidas:['PAPAS GAJO'] },
+  { src:'arrachera',       salidas:['ARRACHERA','ARRACHERA'] },
+  { src:'picaña',          salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
+  { src:'picana',          salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
+  { src:'salmon',          salidas:['SALMON','SALMON PASTA'] },
+  { src:'pulpo',           salidas:['PULPO','TACOS DE PULPO'] },
+  { src:'camaron chico',   salidas:['CAMARON CHICO'] },
+  { src:'camaron grande',  salidas:['CAMARON GRANDE'] },
+  { src:'camaron',         salidas:['CAMARON GRANDE','CAMARON CHICO'] },
+  { src:'lengua',          salidas:['LENGUA A LA VERACRUZANA','LENGUA'] },
+  { src:'molleja',         salidas:['MOLLEJAS'] },
+  { src:'cow boy',         salidas:['COW BOY','FLAP MEAT'] },
+  { src:'new york',        salidas:['NEW YORK'] },
+  { src:'t-bone',          salidas:['T-BONE'] },
+  { src:'pollo',           salidas:['PECHUGA DE POLLO','ENSALADAS','CALDO DE POLLO'] },
+  { src:'hamburguesa',     salidas:['HAMBURGUESAS CARNE'] },
+  { src:'tuetano',         salidas:['TUETANO'] },
+  { src:'papa',            salidas:['PAPAS GAJO'] },
 ];
 
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
@@ -1025,7 +1025,6 @@ function getSalidasEsperadas(nombreFuente){
   const resultado = [];
   entrada.salidas.forEach(salLabel => {
     const nl = norm(salLabel);
-    // Buscar match exacto primero, luego parcial
     const match = catalogo.find(p => p.activo!==false && norm(p.nombre) === nl)
                 || catalogo.find(p => p.activo!==false && norm(p.nombre).includes(nl))
                 || catalogo.find(p => p.activo!==false && nl.includes(norm(p.nombre)));
@@ -1052,7 +1051,6 @@ async function rPorcionado(){
         </div>`;
       return;
     }
-
     let html='';
     lista.forEach(item=>{
       const esperadas = getSalidasEsperadas(item.producto_nombre);
@@ -1072,7 +1070,6 @@ async function rPorcionado(){
           </td>
           <td style="font-size:11px;color:var(--text2);padding:6px 8px">${s.unidad}</td>
         </tr>`).join('');
-
       html+=`
       <div style="background:var(--bg2);border:1.5px solid var(--amber);border-radius:var(--radius);margin-bottom:16px;overflow:hidden">
         <div style="background:var(--amberbg);padding:12px 16px">
@@ -1084,16 +1081,12 @@ async function rPorcionado(){
         <div style="padding:14px 16px">
           <div class="tbl-wrap" style="margin-bottom:12px">
             <table style="min-width:unset">
-              <thead>
-                <tr>
-                  <th style="text-align:left">Producto</th>
-                  <th style="text-align:right">Cantidad</th>
-                  <th style="text-align:left">Unidad</th>
-                </tr>
-              </thead>
-              <tbody id="salidasList_${item.id}">
-                ${filas}
-              </tbody>
+              <thead><tr>
+                <th style="text-align:left">Producto</th>
+                <th style="text-align:right">Cantidad</th>
+                <th style="text-align:left">Unidad</th>
+              </tr></thead>
+              <tbody id="salidasList_${item.id}">${filas}</tbody>
             </table>
           </div>
           <div style="background:var(--bg3);border-radius:var(--rsm);padding:10px 12px;margin-bottom:12px">
@@ -1112,7 +1105,6 @@ async function rPorcionado(){
         </div>
       </div>`;
     });
-
     const procesados = await sbGet('porcionado_pendiente','?status=eq.procesado&order=created_at.desc&limit=10') || [];
     if(procesados.length){
       html+=`<div class="sec-hdr">Porcionados recientes</div>`;
@@ -1123,11 +1115,9 @@ async function rPorcionado(){
         </div>`;
       });
     }
-
     document.getElementById('porcionarLista').innerHTML=html;
-
   }catch(e){
-    document.getElementById('porcionarLista').innerHTML=`<div class="alert">⚠️ Error: ${e.message}<br><br>Si acabas de crear la tabla, recarga la página.</div>`;
+    document.getElementById('porcionarLista').innerHTML=`<div class="alert">⚠️ Error: ${e.message}</div>`;
   }
 }
 
@@ -1200,7 +1190,6 @@ function quitarSalida(itemId, prodId){ const idx=(salidasPorItem[itemId]||[]).fi
 
 async function confirmarPorcionado(itemId){
   const todas = salidasPorItem[itemId] || [];
-  // Solo las que tienen cantidad > 0
   const salidas = todas.filter(s=>(parseFloat(s.cantidad)||0)>0);
   if(!salidas.length){ alert('Llena la cantidad de al menos un producto antes de confirmar.'); return; }
 
@@ -1210,7 +1199,6 @@ async function confirmarPorcionado(itemId){
   try{
     for(const s of salidas){
       if(s.sinCatalogo){
-        // No está en catálogo — solo notificar
         mostrarToast(`⚠️ "${s.nombre}" no está en catálogo — agrégalo primero`, 'error', 4000);
         continue;
       }
@@ -1218,13 +1206,24 @@ async function confirmarPorcionado(itemId){
       const nuevo = r((prod?.stock_resta||0) + parseFloat(s.cantidad));
       await sbPatch('catalogo',`?id=eq.${s.id||s.producto_id}`,{stock_resta:nuevo,updated_at:new Date().toISOString()});
       if(prod) prod.stock_resta = nuevo;
+      // ── NUEVO: actualizar corteHoy para que Corte refleje el porcionado ──
+      const pid = s.id||s.producto_id;
+      if(!corteHoy[pid]) corteHoy[pid]={stock_resta:0,vendido:0,tiene:''};
+      corteHoy[pid].stock_resta = nuevo;
+      try{
+        const existe = await sbGet('cortes',`?fecha=eq.${todayStr()}&producto_id=eq.${pid}&select=id`);
+        if(existe && existe.length>0){
+          await sbPatch('cortes',`?fecha=eq.${todayStr()}&producto_id=eq.${pid}`,{stock_resta:nuevo});
+        }
+      }catch(e2){ console.warn('No se actualizó cortes para',s.nombre,e2.message); }
     }
     await sbPatch('porcionado_pendiente',`?id=eq.${itemId}`,{status:'procesado'});
     delete salidasPorItem[itemId];
     mostrarToast('✅ Porcionado confirmado. Los productos ya están en el stock del restaurante.');
     await rPorcionado();
     await rDash();
-    if(document.getElementById('screen-corte').classList.contains('active')) rCorteTabla();
+    // Re-renderizar corte si está activo
+    if(_seccionActual==='corte') rCorteTabla();
   }catch(e){ alert('Error: '+e.message); }
 }
 
