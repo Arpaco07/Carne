@@ -469,6 +469,15 @@ async function autoGuardarCorte(){
   const btn = document.getElementById('btnGuardarCorte');
   if(btn){ btn.textContent='⏳ Guardando...'; btn.disabled=true; }
   try{
+    // Leer DOM si está disponible (fallback seguro)
+    document.querySelectorAll('#corteTabla input[data-prod]').forEach(inp=>{
+      const id=parseInt(inp.getAttribute('data-prod'));
+      const field=inp.getAttribute('data-field');
+      if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
+      if(field==='sr') corteHoy[id].stock_resta=r(inp.value);
+      else if(field==='v') corteHoy[id].vendido=r(inp.value);
+      else if(field==='t') corteHoy[id].tiene=inp.value;
+    });
     const activos = catalogo.filter(p=>p.activo!==false);
     const rows = activos.map(p=>{
       const c = corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
@@ -670,43 +679,26 @@ async function cargarCorte(){
   document.getElementById('corteTabla').innerHTML='<div class="loader">⏳ Cargando...</div>';
 
   try{
+    // Cargar registros de corte de esta fecha
     const registros = await sbGet('cortes',`?fecha=eq.${fechaCorte}&select=*`) || [];
     corteHoy = {};
-    const esHoy = (fechaCorte === todayStr());
+    registros.forEach(r=>{ corteHoy[r.producto_id]={stock_resta:r.stock_resta,vendido:r.vendido,tiene:r.tiene||''}; });
 
-    registros.forEach(reg=>{
-      let stockInicial = reg.stock_resta;
-      if(esHoy){
-        // Para HOY: usar el mayor entre lo guardado y el catálogo actual
-        // El catálogo sube cuando hay transferencias — nunca debe quedar ignorado
-        const prodCat = catalogo.find(p=>p.id===reg.producto_id);
-        if(prodCat) stockInicial = Math.max(r(reg.stock_resta), r(prodCat.stock_resta));
-      }
-      corteHoy[reg.producto_id]={stock_resta:stockInicial, vendido:reg.vendido, tiene:reg.tiene||''};
-    });
-
-    // Productos sin registro hoy
+    // Para productos sin registro hoy: tomar queda del último corte anterior como punto de partida
     const sinRegistro = catalogo.filter(p=>p.activo!==false && !corteHoy[p.id]);
     if(sinRegistro.length > 0){
-      if(esHoy){
-        // Hoy sin registro previo: usar stock_resta del catálogo directamente
+      const ultimos = await sbGet('cortes',`?fecha=lt.${fechaCorte}&order=fecha.desc&limit=1&select=fecha`) || [];
+      if(ultimos.length > 0){
+        const fechaAnt = ultimos[0].fecha;
+        const cortesAnt = await sbGet('cortes',`?fecha=eq.${fechaAnt}&select=producto_id,queda`) || [];
+        const quedaAnt = {};
+        cortesAnt.forEach(r=>{ quedaAnt[r.producto_id]=r.queda; });
         sinRegistro.forEach(p=>{
-          corteHoy[p.id]={stock_resta:r(p.stock_resta), vendido:0, tiene:''};
+          const qAnt = quedaAnt[p.id];
+corteHoy[p.id]={stock_resta: (qAnt!==undefined&&qAnt!==null) ? r(qAnt) : p.stock_resta, vendido:0, tiene:''};
         });
       } else {
-        // Fecha pasada: buscar queda del corte anterior a esa fecha
-        const ultimos = await sbGet('cortes',`?fecha=lt.${fechaCorte}&order=fecha.desc&limit=1&select=fecha`) || [];
-        if(ultimos.length > 0){
-          const fechaAnt = ultimos[0].fecha;
-          const cortesAnt = await sbGet('cortes',`?fecha=eq.${fechaAnt}&select=producto_id,queda`) || [];
-          const quedaAnt = {};
-          cortesAnt.forEach(reg=>{ quedaAnt[reg.producto_id]=reg.queda; });
-          sinRegistro.forEach(p=>{
-            corteHoy[p.id]={stock_resta: quedaAnt[p.id]!==undefined ? quedaAnt[p.id] : r(p.stock_resta), vendido:0, tiene:''};
-          });
-        } else {
-          sinRegistro.forEach(p=>{ corteHoy[p.id]={stock_resta:r(p.stock_resta), vendido:0, tiene:''}; });
-        }
+        sinRegistro.forEach(p=>{ corteHoy[p.id]={stock_resta:p.stock_resta, vendido:0, tiene:''}; });
       }
     }
 
@@ -755,10 +747,10 @@ function rCorteTabla(){
       const dt=d===null?'—':d>0?`+${f(d)} ⚠️`:d===0?'✓':f(d);
       html+=`<tr>
         <td>${p.nombre}</td>
-        <td style="background:rgba(96,165,250,0.06)"><input class="inp inp-sm" type="number" inputmode="decimal" value="${c.stock_resta||''}" placeholder="0" onchange="updSR(${p.id},this.value)" onfocus="this.select()" style="border-color:rgba(96,165,250,.3)"></td>
-        <td style="background:var(--amberbg)"><input class="inp inp-sm inp-warn" type="number" inputmode="decimal" value="${c.vendido||''}" placeholder="0" onchange="updV(${p.id},this.value)" onfocus="this.select()"></td>
+        <td style="background:rgba(96,165,250,0.06)"><input class="inp inp-sm" type="number" inputmode="decimal" value="${c.stock_resta||''}" placeholder="0" oninput="updSR(${p.id},this.value)" onfocus="this.select()" data-prod="${p.id}" data-field="sr" style="border-color:rgba(96,165,250,.3)"></td>
+        <td style="background:var(--amberbg)"><input class="inp inp-sm inp-warn" type="number" inputmode="decimal" value="${c.vendido||''}" placeholder="0" oninput="updV(${p.id},this.value)" onfocus="this.select()" data-prod="${p.id}" data-field="v"></td>
         <td style="font-weight:600" id="q_${p.id}">${f(q)}</td>
-        <td><input class="inp inp-sm" type="number" inputmode="decimal" value="${c.tiene||''}" placeholder="—" onchange="updT(${p.id},this.value)" onfocus="this.select()"></td>
+        <td><input class="inp inp-sm" type="number" inputmode="decimal" value="${c.tiene||''}" placeholder="—" oninput="updT(${p.id},this.value)" onfocus="this.select()" data-prod="${p.id}" data-field="t"></td>
         <td><span class="${dc}" id="d_${p.id}">${dt}</span></td>
       </tr>`;
     });
@@ -812,22 +804,76 @@ function actualizarFila(id){
 }
 
 async function guardarCorte(){
-  // Usar autoGuardarCorte y quedarse en la misma sección (no te manda a inicio)
   const btn=document.getElementById('btnGuardarCorte');
-  btn.disabled=true;btn.textContent='Guardando...';
+  btn.disabled=true;btn.textContent='⏳ Guardando...';
+
+  // CRÍTICO: leer TODOS los inputs del DOM directamente antes de guardar
+  // Más confiable que depender solo de oninput en móvil
+  document.querySelectorAll('#corteTabla input[data-prod]').forEach(inp=>{
+    const id = parseInt(inp.getAttribute('data-prod'));
+    const field = inp.getAttribute('data-field');
+    if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
+    if(field==='sr') corteHoy[id].stock_resta = r(inp.value);
+    else if(field==='v') corteHoy[id].vendido   = r(inp.value);
+    else if(field==='t') corteHoy[id].tiene      = inp.value;
+  });
+
   try{
     await autoGuardarCorte();
     await cargarCatalogo();
-    const cd=catalogo.filter(p=>p.activo!==false).filter(p=>{const c=corteHoy[p.id];if(!c)return false;const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;});
+    const cd=catalogo.filter(p=>p.activo!==false).filter(p=>{
+      const c=corteHoy[p.id];if(!c)return false;
+      const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;
+    });
     const monto=cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0);
-    btn.textContent='✅ Guardado';
-    setTimeout(()=>{ btn.disabled=false; btn.textContent='Guardar corte del día'; },2000);
-    // Mostrar toast discreto en lugar de alert bloqueante
-    mostrarToast(`✅ Guardado — ${fechaCorte} · ${cd.length} diferencia(s)${monto>0?' · $'+Math.round(monto).toLocaleString('es-MX'):''}`);
+    const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    btn.textContent=`✅ Guardado ${hora}`;
+    btn.disabled=false;
+    // Barra verde visible en pantalla
+    mostrarBannerGuardado(`✅ Corte guardado a las ${hora} — ${cd.length} diferencia(s)${monto>0?' · $'+Math.round(monto).toLocaleString('es-MX'):''}`);
   }catch(e){
-    alert('Error al guardar: '+e.message);
-    btn.disabled=false;btn.textContent='Guardar corte del día';
+    btn.textContent='❌ Error — toca para reintentar';
+    btn.disabled=false;
+    // Error bien visible — no solo un toast
+    mostrarBannerError('❌ No se pudo guardar: '+e.message+' — Revisa tu conexión y vuelve a intentar.');
   }
+}
+
+function mostrarBannerGuardado(msg){
+  let b=document.getElementById('_banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='_banner';
+    b.style.cssText='position:fixed;top:60px;left:0;right:0;z-index:9999;padding:12px 20px;font-size:14px;font-weight:600;text-align:center;transition:opacity .5s;cursor:pointer';
+    b.onclick=()=>{b.style.opacity='0';};
+    document.body.appendChild(b);
+  }
+  b.style.background='#14532d';
+  b.style.color='#4ade80';
+  b.style.border='none';
+  b.style.borderBottom='2px solid #4ade80';
+  b.textContent=msg;
+  b.style.opacity='1';
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>{b.style.opacity='0';},6000);
+}
+
+function mostrarBannerError(msg){
+  let b=document.getElementById('_banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='_banner';
+    b.style.cssText='position:fixed;top:60px;left:0;right:0;z-index:9999;padding:12px 20px;font-size:14px;font-weight:600;text-align:center;transition:opacity .5s;cursor:pointer';
+    b.onclick=()=>{b.style.opacity='0';};
+    document.body.appendChild(b);
+  }
+  b.style.background='#450a0a';
+  b.style.color='#f87171';
+  b.style.border='none';
+  b.style.borderBottom='2px solid #f87171';
+  b.textContent=msg;
+  b.style.opacity='1';
+  // Error no desaparece solo — el usuario lo cierra tocando
 }
 
 function mostrarToast(msg, tipo='ok', duracion=3000){
@@ -928,19 +974,15 @@ async function confirmarTransf(){
 
   if(!confirm(msg+'\n¿Confirmar?')) return;
   try{
-    // DIRECTOS: descuenta bodega + suma restaurante
+    // DIRECTOS: descuenta bodega + suma restaurante (como antes)
     for(const p of directos){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
       const nr=r(p.stock_resta)+r(p._req);
       await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,stock_resta:nr,updated_at:new Date().toISOString()});
       await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:r(p._req),nota:'directo'});
-      p.stock_bodega=nb; p.stock_resta=nr;
-      // Actualizar corteHoy en memoria — el corte verá el nuevo stock al re-renderizar
-      if(!corteHoy[p.id]) corteHoy[p.id]={stock_resta:0,vendido:0,tiene:''};
-      corteHoy[p.id].stock_resta = nr;
-      p._req=0;
+      p.stock_bodega=nb; p.stock_resta=nr; p._req=0;
     }
-    // PORCIONAR: solo descuenta bodega, va a porcionado_pendiente
+    // PORCIONAR: solo descuenta bodega, guarda en porcionado_pendiente, NO toca stock_resta
     for(const p of aPorc){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
       await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,updated_at:new Date().toISOString()});
@@ -958,8 +1000,6 @@ async function confirmarTransf(){
     alert(msg2);
     await cargarCatalogo();
     rBodega();
-    // Si el corte está abierto, actualizar la tabla sin recargar desde Supabase
-    if(_seccionActual==='corte') rCorteTabla();
     if(aPorc.length) goTo('porcionar');
   }catch(e){alert('Error: '+e.message);}
 }
@@ -997,57 +1037,8 @@ async function rDiffs(){
 
 // ── PORCIONADO ────────────────────────────────────────────────────────────────
 const _porcionadosPendientes = new Set();
-let porcionandoId = null;
-let salidasTemp   = [];
-
-// ── MAPA DE PORCIONADO ────────────────────────────────────────────────────────
-// Para cada pieza base, qué productos finales pueden salir
-const PORCIONADO_MAP = [
-  { src:'filete cab',      salidas:['FILETE CAB','FILETE','TAPA DE RIB EYE','OJO DE RIB EYE','RIB EYE','CHICHARRON DE RIB EYE','RIB EYE CON QUESO','AGUACHILE DE RIB EYE'] },
-  { src:'filete nacional', salidas:['FILETE','VOLCAN'] },
-  { src:'arrachera',       salidas:['ARRACHERA','ARRACHERA'] },
-  { src:'picaña',          salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
-  { src:'picana',          salidas:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
-  { src:'salmon',          salidas:['SALMON','SALMON PASTA'] },
-  { src:'pulpo',           salidas:['PULPO','TACOS DE PULPO'] },
-  { src:'camaron chico',   salidas:['CAMARON CHICO'] },
-  { src:'camaron grande',  salidas:['CAMARON GRANDE'] },
-  { src:'camaron',         salidas:['CAMARON GRANDE','CAMARON CHICO'] },
-  { src:'lengua',          salidas:['LENGUA A LA VERACRUZANA','LENGUA'] },
-  { src:'molleja',         salidas:['MOLLEJAS'] },
-  { src:'cow boy',         salidas:['COW BOY','FLAP MEAT'] },
-  { src:'new york',        salidas:['NEW YORK'] },
-  { src:'t-bone',          salidas:['T-BONE'] },
-  { src:'pollo',           salidas:['PECHUGA DE POLLO','ENSALADAS','CALDO DE POLLO'] },
-  { src:'hamburguesa',     salidas:['HAMBURGUESAS CARNE'] },
-  { src:'tuetano',         salidas:['TUETANO'] },
-  { src:'papa',            salidas:['PAPAS GAJO'] },
-];
-
-function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-
-function getSalidasEsperadas(nombreFuente){
-  const n = norm(nombreFuente);
-  const entrada = PORCIONADO_MAP
-    .filter(m => n.includes(norm(m.src)))
-    .sort((a,b) => b.src.length - a.src.length)[0];
-  if(!entrada) return [];
-  const resultado = [];
-  entrada.salidas.forEach(salLabel => {
-    const nl = norm(salLabel);
-    const match = catalogo.find(p => p.activo!==false && norm(p.nombre) === nl)
-                || catalogo.find(p => p.activo!==false && norm(p.nombre).includes(nl))
-                || catalogo.find(p => p.activo!==false && nl.includes(norm(p.nombre)));
-    if(match){
-      if(!resultado.find(r=>r.id===match.id))
-        resultado.push({id:match.id, nombre:match.nombre, unidad:match.unidad, cantidad:'', esperada:true});
-    } else {
-      resultado.push({id:null, nombre:salLabel, unidad:'piezas', cantidad:'', esperada:true, sinCatalogo:true});
-    }
-  });
-  return resultado;
-}
-
+let porcionandoId = null;   // id del registro porcionado_pendiente que se está procesando
+let salidasTemp   = [];     // [{producto_id, nombre, cantidad}]
 
 async function rPorcionado(){
   document.getElementById('porcionarLista').innerHTML='<div class="loader">⏳ Cargando piezas pendientes...</div>';
@@ -1057,64 +1048,43 @@ async function rPorcionado(){
       document.getElementById('porcionarLista').innerHTML=`
         <div class="ok-bar">✅ No hay piezas pendientes de porcionar.</div>
         <div style="color:var(--text2);text-align:center;padding:20px;font-size:13px">
-          Cuando hagas un traspaso con tipo ⚙️ Porcionar, las piezas aparecerán aquí.
+          Cuando hagas un traspaso de bodega con tipo ⚙️ Porcionar, las piezas aparecerán aquí.
         </div>`;
       return;
     }
     let html='';
     lista.forEach(item=>{
-      const esperadas = getSalidasEsperadas(item.producto_nombre);
-      if(!salidasPorItem[item.id]){
-        salidasPorItem[item.id] = esperadas.map(e=>({...e}));
-      }
-      const titulo = `${item.producto_nombre} — ${item.cantidad} ${item.unidad} por porcionar`;
-      const filas = (salidasPorItem[item.id]||[]).map((s,i)=>`
-        <tr>
-          <td style="font-size:13px;font-weight:500;padding:9px 12px">${s.nombre}${s.sinCatalogo?'<span style="font-size:10px;color:var(--red);margin-left:6px">⚠️ sin catálogo</span>':''}</td>
-          <td style="padding:6px 8px;text-align:right">
-            <input class="inp inp-sm" type="number" inputmode="decimal" min="0" step="0.5"
-              value="${s.cantidad||''}" placeholder="0"
-              style="width:90px;text-align:right"
-              onfocus="this.select()"
-              onchange="actualizarCantidadSalida(${item.id},${i},this.value)">
-          </td>
-          <td style="font-size:11px;color:var(--text2);padding:6px 8px">${s.unidad}</td>
-        </tr>`).join('');
       html+=`
-      <div style="background:var(--bg2);border:1.5px solid var(--amber);border-radius:var(--radius);margin-bottom:16px;overflow:hidden">
-        <div style="background:var(--amberbg);padding:12px 16px">
-          <div style="font-size:15px;font-weight:700;color:var(--amber)">⚙️ ${titulo}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:3px">
-            ${new Date(item.fecha+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}
+      <div style="background:var(--bg2);border:1px solid var(--amber);border-radius:var(--radius);margin-bottom:12px;overflow:hidden">
+        <div style="background:var(--amberbg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--amber)">⚙️ ${item.producto_nombre}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${item.cantidad} ${item.unidad} · ${new Date(item.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</div>
           </div>
+          <button class="btn btn-gold" onclick="abrirFormPorcionar(${item.id},'${item.producto_nombre}',${item.cantidad},'${item.unidad}')">
+            Registrar porcionado →
+          </button>
         </div>
-        <div style="padding:14px 16px">
-          <div class="tbl-wrap" style="margin-bottom:12px">
-            <table style="min-width:unset">
-              <thead><tr>
-                <th style="text-align:left">Producto</th>
-                <th style="text-align:right">Cantidad</th>
-                <th style="text-align:left">Unidad</th>
-              </tr></thead>
-              <tbody id="salidasList_${item.id}">${filas}</tbody>
-            </table>
+        <div id="formPorc_${item.id}" style="display:none;padding:16px">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+            ¿Qué productos salieron de <b style="color:var(--text)">${item.cantidad} ${item.unidad} de ${item.producto_nombre}</b>?
           </div>
-          <div style="background:var(--bg3);border-radius:var(--rsm);padding:10px 12px;margin-bottom:12px">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">+ Agregar producto no listado</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <select class="inp" id="selExtra_${item.id}" style="flex:2;min-width:140px">
-                ${catalogo.filter(p=>p.activo!==false).map(p=>`<option value="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">${p.nombre} (${p.unidad})</option>`).join('')}
-              </select>
-              <input class="inp" type="number" inputmode="decimal" id="cantExtra_${item.id}" placeholder="Cant." style="flex:1;min-width:80px;max-width:110px" onfocus="this.select()">
-              <button class="btn" onclick="agregarSalidaExtra(${item.id})">+</button>
-            </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <select class="inp" id="selProd_${item.id}" style="flex:2;min-width:150px">
+              ${catalogo.filter(p=>p.activo!==false).map(p=>`<option value="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">${p.nombre} (${p.unidad})</option>`).join('')}
+            </select>
+            <input class="inp" type="number" inputmode="decimal" id="cantProd_${item.id}" placeholder="Cantidad" style="flex:1;min-width:90px;max-width:120px">
+            <button class="btn" onclick="agregarSalida(${item.id})">+ Agregar</button>
           </div>
+          <div id="salidasList_${item.id}" style="margin-bottom:12px"></div>
           <div class="btn-row">
+            <button class="btn" onclick="cerrarFormPorcionar(${item.id})">Cancelar</button>
             <button class="btn btn-gold" onclick="confirmarPorcionado(${item.id})">✓ Confirmar y sumar al restaurante</button>
           </div>
         </div>
       </div>`;
     });
+    // Procesados recientes
     const procesados = await sbGet('porcionado_pendiente','?status=eq.procesado&order=created_at.desc&limit=10') || [];
     if(procesados.length){
       html+=`<div class="sec-hdr">Porcionados recientes</div>`;
@@ -1127,117 +1097,82 @@ async function rPorcionado(){
     }
     document.getElementById('porcionarLista').innerHTML=html;
   }catch(e){
-    document.getElementById('porcionarLista').innerHTML=`<div class="alert">⚠️ Error: ${e.message}<br><br>Si acabas de crear la tabla, recarga la página.</div>`;
+    document.getElementById('porcionarLista').innerHTML=`<div class="alert">Error: ${e.message}</div>`;
   }
 }
 
-// Toggle mostrar/ocultar el formulario de porcionado
-function toggleFormPorcionar(itemId){
-  const el = document.getElementById('formPorc_'+itemId);
-  const visible = el.style.display!=='none';
-  el.style.display = visible ? 'none' : 'block';
-  if(!visible) renderSalidasList(itemId);
+// Limpiar salidas temporales por item
+let salidasPorItem = {};
+
+function abrirFormPorcionar(itemId, nombre, cantidad, unidad){
+  document.getElementById('formPorc_'+itemId).style.display='block';
+  salidasPorItem[itemId] = salidasPorItem[itemId] || [];
+  renderSalidasTemp(itemId);
+}
+function cerrarFormPorcionar(itemId){
+  document.getElementById('formPorc_'+itemId).style.display='none';
 }
 
-// Renderiza la lista de salidas (predefinidas + extras) con inputs de cantidad
-function renderSalidasList(itemId){
-  const lista = salidasPorItem[itemId] || [];
-  const el = document.getElementById('salidasList_'+itemId);
-  if(!el) return;
-  if(!lista.length){
-    el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0">Sin productos esperados — usa el campo de abajo para agregar.</div>';
-    return;
-  }
-  el.innerHTML = lista.map((s,i)=>{
-    const esExtra = !s.esperada;
-    return `<tr>
-      <td style="font-size:13px;font-weight:500;padding:9px 12px">
-        ${s.nombre}
-        ${s.sinCatalogo?'<span style="font-size:10px;color:var(--red);margin-left:4px">⚠️ sin catálogo</span>':''}
-        ${esExtra?'<span style="font-size:10px;color:var(--text3);margin-left:4px">(extra)</span>':''}
-      </td>
-      <td style="padding:6px 8px;text-align:right">
-        <input class="inp inp-sm" type="number" inputmode="decimal" min="0" step="0.5"
-          value="${s.cantidad||''}" placeholder="0"
-          style="width:90px;text-align:right"
-          onfocus="this.select()"
-          onchange="actualizarCantidadSalida(${itemId},${i},this.value)">
-      </td>
-      <td style="font-size:11px;color:var(--text2);padding:6px 8px">${s.unidad}
-        ${esExtra?`<button onclick="quitarSalidaExtra(${itemId},${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;margin-left:6px">✕</button>`:''}
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function actualizarCantidadSalida(itemId, idx, val){
-  if(salidasPorItem[itemId] && salidasPorItem[itemId][idx]){
-    salidasPorItem[itemId][idx].cantidad = parseFloat(val)||0;
-  }
-}
-
-function agregarSalidaExtra(itemId){
-  const sel = document.getElementById('selExtra_'+itemId);
-  const cant = parseFloat(document.getElementById('cantExtra_'+itemId).value);
-  if(!cant||cant<=0){ alert('Escribe una cantidad válida.'); return; }
-  const opt = sel.options[sel.selectedIndex];
-  const prodId = parseInt(sel.value);
-  const nombre = opt.getAttribute('data-nombre');
-  const unidad = opt.getAttribute('data-unidad');
+function agregarSalida(itemId){
+  const sel=document.getElementById('selProd_'+itemId);
+  const cant=parseFloat(document.getElementById('cantProd_'+itemId).value);
+  if(!cant||cant<=0){alert('Escribe una cantidad válida.');return;}
+  const opt=sel.options[sel.selectedIndex];
+  const prodId=parseInt(sel.value);
+  const nombre=opt.getAttribute('data-nombre');
+  const unidad=opt.getAttribute('data-unidad');
   if(!salidasPorItem[itemId]) salidasPorItem[itemId]=[];
-  // No duplicar
-  const exist = salidasPorItem[itemId].find(s=>s.id===prodId);
-  if(exist){ exist.cantidad = r((exist.cantidad||0)+cant); }
-  else { salidasPorItem[itemId].push({id:prodId, nombre, unidad, cantidad:cant, esperada:false}); }
-  document.getElementById('cantExtra_'+itemId).value='';
-  renderSalidasList(itemId);
+  // Si ya existe ese producto, sumar
+  const exist=salidasPorItem[itemId].find(s=>s.producto_id===prodId);
+  if(exist){ exist.cantidad=r(exist.cantidad+cant); }
+  else { salidasPorItem[itemId].push({producto_id:prodId,nombre,unidad,cantidad:cant}); }
+  document.getElementById('cantProd_'+itemId).value='';
+  renderSalidasTemp(itemId);
 }
 
-function quitarSalidaExtra(itemId, idx){
-  salidasPorItem[itemId].splice(idx,1);
-  renderSalidasList(itemId);
+function quitarSalida(itemId, prodId){
+  salidasPorItem[itemId]=(salidasPorItem[itemId]||[]).filter(s=>s.producto_id!==prodId);
+  renderSalidasTemp(itemId);
 }
 
-// Mantener compatibilidad con código antiguo
-function abrirFormPorcionar(itemId){ toggleFormPorcionar(itemId); }
-function cerrarFormPorcionar(itemId){ toggleFormPorcionar(itemId); }
-function agregarSalida(itemId){ agregarSalidaExtra(itemId); }
-function quitarSalida(itemId, prodId){ const idx=(salidasPorItem[itemId]||[]).findIndex(s=>s.id===prodId||s.producto_id===prodId);if(idx>=0)salidasPorItem[itemId].splice(idx,1);renderSalidasList(itemId); }
+function renderSalidasTemp(itemId){
+  const lista=salidasPorItem[itemId]||[];
+  const el=document.getElementById('salidasList_'+itemId);
+  if(!el) return;
+  if(!lista.length){el.innerHTML='<div style="color:var(--text3);font-size:12px">Aún no has agregado productos.</div>';return;}
+  el.innerHTML=lista.map(s=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:var(--rsm);margin-bottom:5px;font-size:13px">
+      <span><b>${s.nombre}</b> — ${f(s.cantidad)} ${s.unidad}</span>
+      <button onclick="quitarSalida(${itemId},${s.producto_id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('');
+}
 
 async function confirmarPorcionado(itemId){
-  const todas = salidasPorItem[itemId] || [];
-  // Solo las que tienen cantidad > 0
-  const salidas = todas.filter(s=>(parseFloat(s.cantidad)||0)>0);
-  if(!salidas.length){ alert('Llena la cantidad de al menos un producto antes de confirmar.'); return; }
-
-  const resumen = salidas.map(s=>`• ${s.nombre}: ${f(parseFloat(s.cantidad))} ${s.unidad}`).join('\n');
-  if(!confirm(`Confirmar porcionado:\n\n${resumen}\n\n¿Se suman al stock del restaurante?`)) return;
-
+  const salidas=salidasPorItem[itemId]||[];
+  if(!salidas.length){alert('Agrega al menos un producto antes de confirmar.');return;}
+  const resumen=salidas.map(s=>`• ${s.nombre}: ${f(s.cantidad)} ${s.unidad}`).join('\n');
+  if(!confirm(`Confirmar porcionado:\n\n${resumen}\n\n¿Se suman estos productos al stock del restaurante?`)) return;
   try{
+    // Sumar cada salida al stock_resta del producto correspondiente
     for(const s of salidas){
-      if(s.sinCatalogo){
-        mostrarToast(`⚠️ "${s.nombre}" no está en catálogo — agrégalo primero`, 'error', 4000);
-        continue;
-      }
-      const pid = s.id||s.producto_id;
-      const prod = catalogo.find(p=>p.id===pid);
-      const nuevo = r((prod?.stock_resta||0) + parseFloat(s.cantidad));
-      await sbPatch('catalogo',`?id=eq.${pid}`,{stock_resta:nuevo,updated_at:new Date().toISOString()});
-      if(prod) prod.stock_resta = nuevo;
-      // Actualizar corteHoy en memoria
-      if(!corteHoy[pid]) corteHoy[pid]={stock_resta:0,vendido:0,tiene:''};
-      corteHoy[pid].stock_resta = nuevo;
+      const prod=catalogo.find(p=>p.id===s.producto_id);
+      const nuevo=r((prod?.stock_resta||0)+s.cantidad);
+      await sbPatch('catalogo',`?id=eq.${s.producto_id}`,{stock_resta:nuevo,updated_at:new Date().toISOString()});
+      if(prod) prod.stock_resta=nuevo;
     }
+    // Marcar como procesado
     await sbPatch('porcionado_pendiente',`?id=eq.${itemId}`,{status:'procesado'});
+
     delete salidasPorItem[itemId];
     mostrarToast('✅ Porcionado confirmado. Los productos ya están en el stock del restaurante.');
     await rPorcionado();
     await rDash();
-    if(_seccionActual==='corte') rCorteTabla();
-  }catch(e){ alert('Error: '+e.message); }
+    // Si el corte estaba abierto, refrescar la tabla para desbloquear la fila
+    if(document.getElementById('screen-corte').classList.contains('active')){
+      rCorteTabla();
+    }
+  }catch(e){alert('Error: '+e.message);}
 }
-
-let salidasPorItem = {};
 
 // ── IMPRIMIR SECCIÓN ──────────────────────────────────────────────────────────
 // En PC: abre ventana nueva y lanza print automático
