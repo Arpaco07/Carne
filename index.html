@@ -469,7 +469,7 @@ async function autoGuardarCorte(){
   const btn = document.getElementById('btnGuardarCorte');
   if(btn){ btn.textContent='⏳ Guardando...'; btn.disabled=true; }
   try{
-    // Leer DOM si está disponible (fallback seguro)
+    // Fallback: leer DOM si está disponible
     document.querySelectorAll('#corteTabla input[data-prod]').forEach(inp=>{
       const id=parseInt(inp.getAttribute('data-prod'));
       const field=inp.getAttribute('data-field');
@@ -694,8 +694,8 @@ async function cargarCorte(){
         const quedaAnt = {};
         cortesAnt.forEach(r=>{ quedaAnt[r.producto_id]=r.queda; });
         sinRegistro.forEach(p=>{
-          const qAnt = quedaAnt[p.id];
-corteHoy[p.id]={stock_resta: (qAnt!==undefined&&qAnt!==null) ? r(qAnt) : p.stock_resta, vendido:0, tiene:''};
+          const qAnt=quedaAnt[p.id];
+corteHoy[p.id]={stock_resta:(qAnt!=null&&qAnt!==undefined)?r(qAnt):p.stock_resta, vendido:0, tiene:''};
         });
       } else {
         sinRegistro.forEach(p=>{ corteHoy[p.id]={stock_resta:p.stock_resta, vendido:0, tiene:''}; });
@@ -805,75 +805,44 @@ function actualizarFila(id){
 
 async function guardarCorte(){
   const btn=document.getElementById('btnGuardarCorte');
-  btn.disabled=true;btn.textContent='⏳ Guardando...';
-
-  // CRÍTICO: leer TODOS los inputs del DOM directamente antes de guardar
-  // Más confiable que depender solo de oninput en móvil
+  btn.disabled=true; btn.textContent='⏳ Guardando...';
+  // Leer TODOS los valores del DOM antes de guardar
   document.querySelectorAll('#corteTabla input[data-prod]').forEach(inp=>{
-    const id = parseInt(inp.getAttribute('data-prod'));
-    const field = inp.getAttribute('data-field');
+    const id=parseInt(inp.getAttribute('data-prod'));
+    const field=inp.getAttribute('data-field');
     if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
-    if(field==='sr') corteHoy[id].stock_resta = r(inp.value);
-    else if(field==='v') corteHoy[id].vendido   = r(inp.value);
-    else if(field==='t') corteHoy[id].tiene      = inp.value;
+    if(field==='sr') corteHoy[id].stock_resta=r(inp.value);
+    else if(field==='v') corteHoy[id].vendido=r(inp.value);
+    else if(field==='t') corteHoy[id].tiene=inp.value;
   });
-
   try{
     await autoGuardarCorte();
-    await cargarCatalogo();
     const cd=catalogo.filter(p=>p.activo!==false).filter(p=>{
       const c=corteHoy[p.id];if(!c)return false;
       const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return d!==null&&d>0;
     });
     const monto=cd.reduce((s,p)=>{const c=corteHoy[p.id];const d=diff(queda(c.stock_resta,c.vendido),c.tiene);return s+Math.abs(d||0)*r(p.precio||0);},0);
     const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    btn.textContent=`✅ Guardado ${hora}`;
-    btn.disabled=false;
-    // Barra verde visible en pantalla
-    mostrarBannerGuardado(`✅ Corte guardado a las ${hora} — ${cd.length} diferencia(s)${monto>0?' · $'+Math.round(monto).toLocaleString('es-MX'):''}`);
+    btn.textContent=`✅ Guardado ${hora}`; btn.disabled=false;
+    mostrarBanner(`✅ Corte guardado ${hora} — ${cd.length} diferencia(s)${monto>0?' · $'+Math.round(monto).toLocaleString('es-MX'):''}`, 'ok');
   }catch(e){
-    btn.textContent='❌ Error — toca para reintentar';
-    btn.disabled=false;
-    // Error bien visible — no solo un toast
-    mostrarBannerError('❌ No se pudo guardar: '+e.message+' — Revisa tu conexión y vuelve a intentar.');
+    btn.textContent='❌ Error — reintenta'; btn.disabled=false;
+    mostrarBanner('❌ NO SE GUARDÓ: '+e.message+' — Revisa conexión y vuelve a guardar.', 'err');
   }
 }
 
-function mostrarBannerGuardado(msg){
+function mostrarBanner(msg, tipo){
   let b=document.getElementById('_banner');
-  if(!b){
-    b=document.createElement('div');
-    b.id='_banner';
-    b.style.cssText='position:fixed;top:60px;left:0;right:0;z-index:9999;padding:12px 20px;font-size:14px;font-weight:600;text-align:center;transition:opacity .5s;cursor:pointer';
-    b.onclick=()=>{b.style.opacity='0';};
-    document.body.appendChild(b);
-  }
-  b.style.background='#14532d';
-  b.style.color='#4ade80';
-  b.style.border='none';
-  b.style.borderBottom='2px solid #4ade80';
-  b.textContent=msg;
-  b.style.opacity='1';
+  if(!b){b=document.createElement('div');b.id='_banner';
+    b.style.cssText='position:fixed;top:56px;left:0;right:0;z-index:9999;padding:12px 16px;font-size:13px;font-weight:600;text-align:center;cursor:pointer;transition:opacity .4s';
+    b.onclick=()=>{b.style.opacity='0';};document.body.appendChild(b);}
+  b.style.background=tipo==='ok'?'#14532d':'#450a0a';
+  b.style.color=tipo==='ok'?'#4ade80':'#f87171';
+  b.style.borderBottom=tipo==='ok'?'2px solid #4ade80':'2px solid #f87171';
+  b.textContent=msg; b.style.opacity='1';
   clearTimeout(b._t);
-  b._t=setTimeout(()=>{b.style.opacity='0';},6000);
-}
-
-function mostrarBannerError(msg){
-  let b=document.getElementById('_banner');
-  if(!b){
-    b=document.createElement('div');
-    b.id='_banner';
-    b.style.cssText='position:fixed;top:60px;left:0;right:0;z-index:9999;padding:12px 20px;font-size:14px;font-weight:600;text-align:center;transition:opacity .5s;cursor:pointer';
-    b.onclick=()=>{b.style.opacity='0';};
-    document.body.appendChild(b);
-  }
-  b.style.background='#450a0a';
-  b.style.color='#f87171';
-  b.style.border='none';
-  b.style.borderBottom='2px solid #f87171';
-  b.textContent=msg;
-  b.style.opacity='1';
-  // Error no desaparece solo — el usuario lo cierra tocando
+  if(tipo==='ok') b._t=setTimeout(()=>{b.style.opacity='0';},6000);
+  // Errores NO desaparecen solos — el usuario los cierra tocando
 }
 
 function mostrarToast(msg, tipo='ok', duracion=3000){
@@ -1037,58 +1006,113 @@ async function rDiffs(){
 
 // ── PORCIONADO ────────────────────────────────────────────────────────────────
 const _porcionadosPendientes = new Set();
-let porcionandoId = null;   // id del registro porcionado_pendiente que se está procesando
-let salidasTemp   = [];     // [{producto_id, nombre, cantidad}]
+
+const PORCIONADO_MAP = [
+  {src:'pieza basica rib eye cab',  out:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye']},
+  {src:'pieza basica rib eye nac',  out:['Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye']},
+  {src:'pieza basica rib eye',      out:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye','Tacos Rib Eye']},
+  {src:'pieza basica vacio',        out:['Vacío','Flap Meat']},
+  {src:'pieza basica new york',     out:['New York']},
+  {src:'pieza basica',              out:['Tapa de Rib Eye','Ojo de Rib Eye','Rib Eye','Espárragos Rib Eye','Chicharrón Rib Eye']},
+  {src:'arrachera',                 out:['Arrachera','Arrachera gramaje','Tacos de Arrachera','Tacos Arrachera']},
+  {src:'camaron chico',             out:['Camarón chico','Camaron chico']},
+  {src:'camaron grande',            out:['Camarón grande','Camaron grande']},
+  {src:'camaron',                   out:['Camarón grande','Camarón chico','Camaron grande','Camaron chico']},
+  {src:'pulpo',                     out:['Pulpo','Tacos de pulpo','Tacos pulpo']},
+  {src:'salmon',                    out:['Salmón','Salmon','Salmón pasta','Salmon pasta']},
+  {src:'picana',                    out:['Picaña','Picana','Tacos de Picaña','Tacos Picaña']},
+  {src:'picaña',                    out:['Picaña','Picana','Tacos de Picaña','Tacos Picaña']},
+  {src:'filete cab',                out:['Filete','Filete corte','Filete CAB','Tacos de Filete','Filete Tacos CAB']},
+  {src:'filete nacional',           out:['Filete','Volcán','Filete Volcán','Tacos de Filete']},
+  {src:'filete',                    out:['Filete','Filete corte','Tacos de Filete']},
+  {src:'lengua',                    out:['Lengua','Tacos Lengua','Tacos de Lengua']},
+  {src:'molleja',                   out:['Mollejas','Molleja']},
+  {src:'hamburguesa',               out:['Hamburguesa','Hamburguesas Los Pares']},
+  {src:'pollo',                     out:['Pechuga','Pechugas','Ensalada','Caldo de pollo']},
+  {src:'tuetano',                   out:['Tuétano','Tuetano']},
+  {src:'papa',                      out:['Papa','Papas gajo']},
+  {src:'bolonesa',                  out:['Boloñesa','Bolonesa']},
+  {src:'boloñesa',                  out:['Boloñesa','Bolonesa']},
+];
+
+function norm(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+
+function getSalidasEsperadas(nombreFuente){
+  const n=norm(nombreFuente);
+  const entrada=PORCIONADO_MAP.filter(m=>n.includes(norm(m.src))).sort((a,b)=>b.src.length-a.src.length)[0];
+  if(!entrada)return[];
+  const visto=new Set(), res=[];
+  entrada.out.forEach(lbl=>{
+    const nl=norm(lbl);
+    const match=catalogo.find(p=>{
+      if(!p.activo)return false;
+      const pn=norm(p.nombre);
+      return pn===nl||pn.includes(nl)||nl.includes(pn);
+    });
+    if(match&&!visto.has(match.id)){
+      visto.add(match.id);
+      res.push({id:match.id,nombre:match.nombre,unidad:match.unidad,cantidad:0,esperada:true});
+    }else if(!match){
+      res.push({id:null,nombre:lbl,unidad:'piezas',cantidad:0,esperada:true,sinCatalogo:true});
+    }
+  });
+  return res;
+}
+
+let salidasPorItem={};
 
 async function rPorcionado(){
   document.getElementById('porcionarLista').innerHTML='<div class="loader">⏳ Cargando piezas pendientes...</div>';
   try{
-    const lista = await sbGet('porcionado_pendiente','?status=eq.pendiente&order=created_at.desc') || [];
+    const lista=await sbGet('porcionado_pendiente','?status=eq.pendiente&order=created_at.desc')||[];
     if(!lista.length){
       document.getElementById('porcionarLista').innerHTML=`
         <div class="ok-bar">✅ No hay piezas pendientes de porcionar.</div>
         <div style="color:var(--text2);text-align:center;padding:20px;font-size:13px">
-          Cuando hagas un traspaso de bodega con tipo ⚙️ Porcionar, las piezas aparecerán aquí.
+          Cuando hagas un traspaso con tipo ⚙️ Porcionar, las piezas aparecerán aquí.
         </div>`;
       return;
     }
     let html='';
     lista.forEach(item=>{
+      const esp=getSalidasEsperadas(item.producto_nombre);
+      if(!salidasPorItem[item.id]) salidasPorItem[item.id]=esp.map(e=>({...e}));
       html+=`
-      <div style="background:var(--bg2);border:1px solid var(--amber);border-radius:var(--radius);margin-bottom:12px;overflow:hidden">
+      <div style="background:var(--bg2);border:1.5px solid var(--amber);border-radius:var(--radius);margin-bottom:14px;overflow:hidden">
         <div style="background:var(--amberbg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <div>
             <div style="font-size:15px;font-weight:700;color:var(--amber)">⚙️ ${item.producto_nombre}</div>
             <div style="font-size:12px;color:var(--text2);margin-top:2px">${item.cantidad} ${item.unidad} · ${new Date(item.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</div>
           </div>
-          <button class="btn btn-gold" onclick="abrirFormPorcionar(${item.id},'${item.producto_nombre}',${item.cantidad},'${item.unidad}')">
-            Registrar porcionado →
-          </button>
+          <button class="btn btn-gold" onclick="toggleFormPorc(${item.id})">Registrar porcionado →</button>
         </div>
-        <div id="formPorc_${item.id}" style="display:none;padding:16px">
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
-            ¿Qué productos salieron de <b style="color:var(--text)">${item.cantidad} ${item.unidad} de ${item.producto_nombre}</b>?
+        <div id="fp_${item.id}" style="display:none;padding:16px">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+            ¿Qué salió de <b style="color:var(--text)">${item.cantidad} ${item.unidad} de ${item.producto_nombre}</b>?
+            Llena lo que aplique, deja en 0 lo que no.
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-            <select class="inp" id="selProd_${item.id}" style="flex:2;min-width:150px">
-              ${catalogo.filter(p=>p.activo!==false).map(p=>`<option value="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">${p.nombre} (${p.unidad})</option>`).join('')}
-            </select>
-            <input class="inp" type="number" inputmode="decimal" id="cantProd_${item.id}" placeholder="Cantidad" style="flex:1;min-width:90px;max-width:120px">
-            <button class="btn" onclick="agregarSalida(${item.id})">+ Agregar</button>
+          <div id="sl_${item.id}"></div>
+          <div style="background:var(--bg3);border-radius:var(--rsm);padding:12px;margin-bottom:12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">+ Agregar otro producto</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select class="inp" id="se_${item.id}" style="flex:2;min-width:140px">
+                ${catalogo.filter(p=>p.activo!==false).map(p=>`<option value="${p.id}" data-n="${p.nombre}" data-u="${p.unidad}">${p.nombre} (${p.unidad})</option>`).join('')}
+              </select>
+              <input class="inp" type="number" inputmode="decimal" id="ce_${item.id}" placeholder="Cant." style="flex:1;min-width:80px;max-width:100px" onfocus="this.select()">
+              <button class="btn" onclick="addExtra(${item.id})">+</button>
+            </div>
           </div>
-          <div id="salidasList_${item.id}" style="margin-bottom:12px"></div>
           <div class="btn-row">
-            <button class="btn" onclick="cerrarFormPorcionar(${item.id})">Cancelar</button>
+            <button class="btn" onclick="toggleFormPorc(${item.id})">Cancelar</button>
             <button class="btn btn-gold" onclick="confirmarPorcionado(${item.id})">✓ Confirmar y sumar al restaurante</button>
           </div>
         </div>
       </div>`;
     });
-    // Procesados recientes
-    const procesados = await sbGet('porcionado_pendiente','?status=eq.procesado&order=created_at.desc&limit=10') || [];
-    if(procesados.length){
+    const proc=await sbGet('porcionado_pendiente','?status=eq.procesado&order=created_at.desc&limit=10')||[];
+    if(proc.length){
       html+=`<div class="sec-hdr">Porcionados recientes</div>`;
-      procesados.forEach(item=>{
+      proc.forEach(item=>{
         html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:13px">
           <span style="color:var(--text2)">✓ ${item.producto_nombre} — ${item.cantidad} ${item.unidad}</span>
           <span style="font-size:11px;color:var(--text3)">${new Date(item.created_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>
@@ -1096,84 +1120,116 @@ async function rPorcionado(){
       });
     }
     document.getElementById('porcionarLista').innerHTML=html;
+    lista.forEach(item=>renderSL(item.id));
   }catch(e){
-    document.getElementById('porcionarLista').innerHTML=`<div class="alert">Error: ${e.message}</div>`;
+    document.getElementById('porcionarLista').innerHTML=`<div class="alert">⚠️ Error: ${e.message}</div>`;
   }
 }
 
-// Limpiar salidas temporales por item
-let salidasPorItem = {};
-
-function abrirFormPorcionar(itemId, nombre, cantidad, unidad){
-  document.getElementById('formPorc_'+itemId).style.display='block';
-  salidasPorItem[itemId] = salidasPorItem[itemId] || [];
-  renderSalidasTemp(itemId);
-}
-function cerrarFormPorcionar(itemId){
-  document.getElementById('formPorc_'+itemId).style.display='none';
+function toggleFormPorc(id){
+  const el=document.getElementById('fp_'+id);
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  if(!open) renderSL(id);
 }
 
-function agregarSalida(itemId){
-  const sel=document.getElementById('selProd_'+itemId);
-  const cant=parseFloat(document.getElementById('cantProd_'+itemId).value);
-  if(!cant||cant<=0){alert('Escribe una cantidad válida.');return;}
-  const opt=sel.options[sel.selectedIndex];
-  const prodId=parseInt(sel.value);
-  const nombre=opt.getAttribute('data-nombre');
-  const unidad=opt.getAttribute('data-unidad');
-  if(!salidasPorItem[itemId]) salidasPorItem[itemId]=[];
-  // Si ya existe ese producto, sumar
-  const exist=salidasPorItem[itemId].find(s=>s.producto_id===prodId);
-  if(exist){ exist.cantidad=r(exist.cantidad+cant); }
-  else { salidasPorItem[itemId].push({producto_id:prodId,nombre,unidad,cantidad:cant}); }
-  document.getElementById('cantProd_'+itemId).value='';
-  renderSalidasTemp(itemId);
-}
-
-function quitarSalida(itemId, prodId){
-  salidasPorItem[itemId]=(salidasPorItem[itemId]||[]).filter(s=>s.producto_id!==prodId);
-  renderSalidasTemp(itemId);
-}
-
-function renderSalidasTemp(itemId){
-  const lista=salidasPorItem[itemId]||[];
-  const el=document.getElementById('salidasList_'+itemId);
-  if(!el) return;
-  if(!lista.length){el.innerHTML='<div style="color:var(--text3);font-size:12px">Aún no has agregado productos.</div>';return;}
-  el.innerHTML=lista.map(s=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:var(--rsm);margin-bottom:5px;font-size:13px">
-      <span><b>${s.nombre}</b> — ${f(s.cantidad)} ${s.unidad}</span>
-      <button onclick="quitarSalida(${itemId},${s.producto_id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">✕</button>
+function renderSL(id){
+  const lista=salidasPorItem[id]||[];
+  const el=document.getElementById('sl_'+id);
+  if(!el)return;
+  if(!lista.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0">Agrega productos con el campo de abajo.</div>';return;}
+  el.innerHTML=lista.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:var(--rsm);margin-bottom:6px;border:1px solid var(--border);flex-wrap:wrap">
+      <div style="flex:2;min-width:110px;font-size:13px;font-weight:500">
+        ${s.nombre}
+        ${s.sinCatalogo?'<span style="font-size:10px;color:var(--red);display:block">⚠️ no está en catálogo — agrégalo primero</span>':''}
+        ${!s.esperada?'<span style="font-size:10px;color:var(--text3)"> (extra)</span>':''}
+      </div>
+      <input class="inp inp-sm" type="number" inputmode="decimal" min="0" step="0.5"
+        value="${s.cantidad>0?s.cantidad:''}" placeholder="0"
+        style="width:88px;text-align:right" onfocus="this.select()"
+        oninput="salidasPorItem[${id}][${i}].cantidad=parseFloat(this.value)||0">
+      <span style="font-size:11px;color:var(--text2);flex-shrink:0">${s.unidad}</span>
+      ${!s.esperada?`<button onclick="rmExtra(${id},${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0 4px">✕</button>`:''}
     </div>`).join('');
 }
 
+function addExtra(id){
+  const sel=document.getElementById('se_'+id);
+  const cant=parseFloat(document.getElementById('ce_'+id).value);
+  if(!cant||cant<=0){alert('Escribe una cantidad válida.');return;}
+  const opt=sel.options[sel.selectedIndex];
+  const prodId=parseInt(sel.value);
+  if(!salidasPorItem[id]) salidasPorItem[id]=[];
+  const exist=salidasPorItem[id].find(s=>s.id===prodId);
+  if(exist){exist.cantidad=r((exist.cantidad||0)+cant);}
+  else{salidasPorItem[id].push({id:prodId,nombre:opt.getAttribute('data-n'),unidad:opt.getAttribute('data-u'),cantidad:cant,esperada:false});}
+  document.getElementById('ce_'+id).value='';
+  renderSL(id);
+}
+function rmExtra(id,i){salidasPorItem[id].splice(i,1);renderSL(id);}
+
 async function confirmarPorcionado(itemId){
-  const salidas=salidasPorItem[itemId]||[];
-  if(!salidas.length){alert('Agrega al menos un producto antes de confirmar.');return;}
+  // PASO 1: Leer cantidades directamente del DOM (lo más confiable en móvil)
+  const container=document.getElementById('sl_'+itemId);
+  if(container){
+    container.querySelectorAll('input[type=number]').forEach((inp,i)=>{
+      if(salidasPorItem[itemId]&&salidasPorItem[itemId][i]!==undefined){
+        salidasPorItem[itemId][i].cantidad=parseFloat(inp.value)||0;
+      }
+    });
+  }
+
+  const todas=salidasPorItem[itemId]||[];
+  const salidas=todas.filter(s=>s.cantidad>0);
+  if(!salidas.length){alert('Llena la cantidad de al menos un producto antes de confirmar.');return;}
+
   const resumen=salidas.map(s=>`• ${s.nombre}: ${f(s.cantidad)} ${s.unidad}`).join('\n');
-  if(!confirm(`Confirmar porcionado:\n\n${resumen}\n\n¿Se suman estos productos al stock del restaurante?`)) return;
+  if(!confirm(`Confirmar porcionado:\n\n${resumen}\n\n¿Se suman al stock del restaurante?`))return;
+
   try{
-    // Sumar cada salida al stock_resta del producto correspondiente
     for(const s of salidas){
-      const prod=catalogo.find(p=>p.id===s.producto_id);
-      const nuevo=r((prod?.stock_resta||0)+s.cantidad);
-      await sbPatch('catalogo',`?id=eq.${s.producto_id}`,{stock_resta:nuevo,updated_at:new Date().toISOString()});
-      if(prod) prod.stock_resta=nuevo;
+      if(s.sinCatalogo){mostrarToast(`⚠️ "${s.nombre}" no está en catálogo — agrégalo primero`,'error',5000);continue;}
+      // Buscar por s.id (nueva estructura) con fallback a s.producto_id (estructura vieja)
+      const pid = s.id || s.producto_id;
+      if(!pid){mostrarToast(`⚠️ Sin ID para: ${s.nombre}`,'error',4000);continue;}
+      const prod=catalogo.find(p=>p.id===pid);
+      if(!prod){mostrarToast(`⚠️ Producto no encontrado: ${s.nombre}`,'error',4000);continue;}
+
+      const nuevo=r((prod.stock_resta||0)+s.cantidad);
+
+      // Actualizar catálogo en Supabase
+      await sbPatch('catalogo',`?id=eq.${pid}`,{stock_resta:nuevo,updated_at:new Date().toISOString()});
+      prod.stock_resta=nuevo;
+
+      // CRÍTICO: actualizar corteHoy para que el corte del día lo refleje
+      if(corteHoy[pid]){
+        corteHoy[pid].stock_resta=r((corteHoy[pid].stock_resta||0)+s.cantidad);
+      } else {
+        corteHoy[pid]={stock_resta:nuevo,vendido:0,tiene:''};
+      }
     }
-    // Marcar como procesado
+
+    // Marcar porcionado como procesado
     await sbPatch('porcionado_pendiente',`?id=eq.${itemId}`,{status:'procesado'});
 
+    // Guardar el corte actualizado a Supabase (para que mañana cargue correcto)
+    try{ await autoGuardarCorte(); }catch(e){console.warn('autoGuardar tras porcionado:',e.message);}
+
     delete salidasPorItem[itemId];
-    mostrarToast('✅ Porcionado confirmado. Los productos ya están en el stock del restaurante.');
+    mostrarBanner('✅ Porcionado confirmado — stock del restaurante actualizado','ok');
     await rPorcionado();
     await rDash();
-    // Si el corte estaba abierto, refrescar la tabla para desbloquear la fila
+    // Refrescar tabla del corte si está visible
     if(document.getElementById('screen-corte').classList.contains('active')){
-      rCorteTabla();
+      rCorteTabla(); rCorteStats();
     }
-  }catch(e){alert('Error: '+e.message);}
+  }catch(e){
+    mostrarBanner('❌ Error en porcionado: '+e.message,'err');
+  }
 }
 
+// ── Bodega: porcionar toggle ──────────────────────────────────────────────────
 // ── IMPRIMIR SECCIÓN ──────────────────────────────────────────────────────────
 // En PC: abre ventana nueva y lanza print automático
 // En Android/iOS: abre pestaña limpia → el usuario usa menú del navegador → Imprimir / Guardar PDF / Compartir
