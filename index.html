@@ -943,14 +943,19 @@ async function confirmarTransf(){
 
   if(!confirm(msg+'\n¿Confirmar?')) return;
   try{
-    // DIRECTOS: descuenta bodega + suma restaurante (como antes)
+    // DIRECTOS: descuenta bodega + suma restaurante + actualiza corteHoy
     for(const p of directos){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
       const nr=r(p.stock_resta)+r(p._req);
       await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,stock_resta:nr,updated_at:new Date().toISOString()});
       await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:r(p._req),nota:'directo'});
       p.stock_bodega=nb; p.stock_resta=nr; p._req=0;
+      // CRITICO: actualizar corteHoy para que Restaurante refleje el traspaso inmediatamente
+      if(corteHoy[p.id]){ corteHoy[p.id].stock_resta=nr; }
+      else{ corteHoy[p.id]={stock_resta:nr,vendido:0,tiene:''}; }
     }
+    // Guardar el corte en Supabase con el nuevo stock
+    if(directos.length) try{ await autoGuardarCorte(); }catch(e){ console.warn('corte tras traspaso:',e.message); }
     // PORCIONAR: solo descuenta bodega, guarda en porcionado_pendiente, NO toca stock_resta
     for(const p of aPorc){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
