@@ -1342,10 +1342,12 @@ async function iniciarApp(){
 }
 
 // Arrancar
-SB_URL = localStorage.getItem('sb_url')||'';
-SB_KEY = localStorage.getItem('sb_key')||'';
-if(SB_URL && SB_KEY){ iniciarApp(); }
-else{ document.getElementById('setupScreen').style.display='block'; }
+// Credenciales fijas: ya no pide configurar cada vez
+const SB_URL_FIJA = 'https://ltqtvxullzttaxmaoygd.supabase.co';
+const SB_KEY_FIJA = 'sb_publishable_JLsxSWLvG9nbj6bjqFzHvA_hxtLcYvB';
+SB_URL = localStorage.getItem('sb_url') || SB_URL_FIJA;
+SB_KEY = localStorage.getItem('sb_key') || SB_KEY_FIJA;
+iniciarApp();
 </script>
 </body>
 </html>
