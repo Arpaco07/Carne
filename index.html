@@ -465,13 +465,41 @@ async function goTo(id){
 }
 
 // Guarda el corte en segundo plano sin alert, sin cambiar fecha
+// Asegura que corteHoy corresponda a HOY con el arrastre correcto (queda de ayer).
+// Se usa antes de sumar traspasos/porcionados para NO partir del acumulado del catálogo.
+async function asegurarCorteDeHoy(){
+  const hoy = todayStr();
+  const faltan = catalogo.filter(p=>p.activo!==false && !corteHoy[p.id]).length;
+  if(fechaCorte === hoy && faltan === 0) return; // ya está listo
+  fechaCorte = hoy;
+  const sel = document.getElementById('fechaSel'); if(sel) sel.value = hoy;
+  corteHoy = {};
+  const registros = await sbGet('cortes', `?fecha=eq.${hoy}&select=*`) || [];
+  registros.forEach(rg=>{ corteHoy[rg.producto_id]={stock_resta:rg.stock_resta,vendido:rg.vendido,tiene:rg.tiene||''}; });
+  const sinReg = catalogo.filter(p=>p.activo!==false && !corteHoy[p.id]);
+  if(sinReg.length){
+    let quedaAnt = {};
+    const ult = await sbGet('cortes', `?fecha=lt.${hoy}&order=fecha.desc&limit=1&select=fecha`) || [];
+    if(ult.length){
+      const cAnt = await sbGet('cortes', `?fecha=eq.${ult[0].fecha}&select=producto_id,queda`) || [];
+      cAnt.forEach(rg=>{ quedaAnt[rg.producto_id]=rg.queda; });
+    }
+    sinReg.forEach(p=>{
+      const q = quedaAnt[p.id];
+      corteHoy[p.id] = {stock_resta:(q!=null?r(q):0), vendido:0, tiene:''};
+    });
+  }
+}
+
 async function autoGuardarCorte(){
   const btn = document.getElementById('btnGuardarCorte');
   if(btn){ btn.textContent='⏳ Guardando...'; btn.disabled=true; }
   try{
-    const activos = catalogo.filter(p=>p.activo!==false);
+    // Solo se guardan productos que YA están en corteHoy.
+    // Antes usaba p.stock_resta como respaldo y eso metía el acumulado del catálogo al corte.
+    const activos = catalogo.filter(p=>p.activo!==false && corteHoy[p.id]);
     const rows = activos.map(p=>{
-      const c = corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
+      const c = corteHoy[p.id];
       const q = queda(c.stock_resta, c.vendido);
       const d = diff(q, c.tiene);
       return {fecha:fechaCorte, producto_id:p.id, stock_resta:c.stock_resta, vendido:c.vendido, queda:q, tiene:c.tiene||'', diferencia:d};
@@ -685,10 +713,10 @@ async function cargarCorte(){
         const quedaAnt = {};
         cortesAnt.forEach(r=>{ quedaAnt[r.producto_id]=r.queda; });
         sinRegistro.forEach(p=>{
-          corteHoy[p.id]={stock_resta: quedaAnt[p.id]!==undefined ? quedaAnt[p.id] : p.stock_resta, vendido:0, tiene:''};
+          const qa=quedaAnt[p.id]; corteHoy[p.id]={stock_resta:(qa!=null?r(qa):0), vendido:0, tiene:''};
         });
       } else {
-        sinRegistro.forEach(p=>{ corteHoy[p.id]={stock_resta:p.stock_resta, vendido:0, tiene:''}; });
+        sinRegistro.forEach(p=>{ corteHoy[p.id]={stock_resta:0, vendido:0, tiene:''}; });
       }
     }
 
@@ -730,7 +758,7 @@ function rCorteTabla(){
       <thead><tr><th>${cat}</th><th style="background:rgba(96,165,250,0.08);color:var(--blue)">Restaurante ✏️</th><th style="background:var(--amberbg)">Vendido ✏️</th><th>Queda</th><th style="color:var(--text3)">Tiene (opc.)</th><th>Diferencia</th></tr></thead>
       <tbody>`;
     prods.forEach(p=>{
-      const c=corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
+      const c=corteHoy[p.id]||{stock_resta:0,vendido:0,tiene:''};
       const q=queda(c.stock_resta,c.vendido);
       const d=diff(q,c.tiene);
       const dc=d===null?'dz':d>0?'dp':d<0?'dn':'dz';
@@ -910,16 +938,17 @@ async function confirmarTransf(){
 
   if(!confirm(msg+'\n¿Confirmar?')) return;
   try{
-    // DIRECTOS: descuenta bodega + suma restaurante + actualiza corteHoy
+    // DIRECTOS: descuenta bodega y SUMA al Restaurante del corte de HOY.
+    // Ya NO se toca catalogo.stock_resta (ese campo acumulaba sin restar venta).
+    if(directos.length) await asegurarCorteDeHoy();
     for(const p of directos){
       const nb=Math.max(0,r(p.stock_bodega)-r(p._req));
-      const nr=r(p.stock_resta)+r(p._req);
-      await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,stock_resta:nr,updated_at:new Date().toISOString()});
-      await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:r(p._req),nota:'directo'});
-      p.stock_bodega=nb; p.stock_resta=nr; p._req=0;
-      // Actualizar corteHoy para que la sección Corte refleje el traspaso
-      if(corteHoy[p.id]){ corteHoy[p.id].stock_resta=nr; }
-      else{ corteHoy[p.id]={stock_resta:nr,vendido:0,tiene:''}; }
+      const cant=r(p._req);
+      await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nb,updated_at:new Date().toISOString()});
+      await sbPost('transferencias',{fecha:todayStr(),producto_id:p.id,cantidad:cant,nota:'directo'});
+      if(!corteHoy[p.id]) corteHoy[p.id]={stock_resta:0,vendido:0,tiene:''};
+      corteHoy[p.id].stock_resta = r((corteHoy[p.id].stock_resta||0) + cant);
+      p.stock_bodega=nb; p._req=0;
     }
     // Guardar corte en Supabase con el nuevo stock
     if(directos.length) try{ await autoGuardarCorte(); }catch(e){ console.warn('corte tras traspaso:',e.message); }
@@ -1151,18 +1180,16 @@ async function confirmarPorcionado(itemId){
   if(!confirm(`Confirmar porcionado:\n\n${resumen}\n\n¿Se suman al stock del restaurante?`)) return;
 
   try{
+    // Base correcta = queda de ayer. NUNCA el acumulado del catálogo.
+    await asegurarCorteDeHoy();
     for(const s of salidas){
       if(s.sinCatalogo){ mostrarToast(`⚠️ "${s.nombre}" no está en catálogo`,'error',5000); continue; }
       const prod = catalogo.find(p => p.id === s.id);
       if(!prod){ mostrarToast(`⚠️ Producto no encontrado: ${s.nombre}`,'error',4000); continue; }
 
-      const nuevo = r((prod.stock_resta||0) + s.cantidad);
-      await sbPatch('catalogo',`?id=eq.${prod.id}`,{stock_resta:nuevo, updated_at:new Date().toISOString()});
-      prod.stock_resta = nuevo;
-
-      // Actualizar corteHoy para que el corte del día lo refleje
-      if(corteHoy[prod.id]){ corteHoy[prod.id].stock_resta = r((corteHoy[prod.id].stock_resta||0) + s.cantidad); }
-      else{ corteHoy[prod.id] = {stock_resta:nuevo, vendido:0, tiene:''}; }
+      // Suma SOLO al Restaurante del corte de hoy
+      if(!corteHoy[prod.id]) corteHoy[prod.id]={stock_resta:0,vendido:0,tiene:''};
+      corteHoy[prod.id].stock_resta = r((corteHoy[prod.id].stock_resta||0) + s.cantidad);
     }
 
     await sbPatch('porcionado_pendiente',`?id=eq.${itemId}`,{status:'procesado'});
@@ -1224,7 +1251,7 @@ function imprimirSeccion(id){
       body+=`<div class="section"><div class="section-hdr">${cat}</div>
         <table><thead><tr><th>Producto</th><th>Restaurante</th><th>Vendido</th><th>Queda</th><th>Tiene</th><th>Diferencia</th></tr></thead><tbody>`;
       prods.forEach(p=>{
-        const c=corteHoy[p.id]||{stock_resta:p.stock_resta,vendido:0,tiene:''};
+        const c=corteHoy[p.id]||{stock_resta:0,vendido:0,tiene:''};
         const q=queda(c.stock_resta,c.vendido);
         const d=diff(q,c.tiene);
         const dTxt=d===null?'—':d>0?`+${f(d)} ⚠️`:d===0?'✓':f(d);
@@ -1342,12 +1369,10 @@ async function iniciarApp(){
 }
 
 // Arrancar
-// Credenciales fijas del inventario de carnes (siempre se usan estas)
-const SB_URL_FIJA = 'https://vfhjuojcdslffgfqvhql.supabase.co';
-const SB_KEY_FIJA = 'sb_publishable_CflZaiS3yyyycfKvTrR3Jw_qwbjo9lV';
-SB_URL = SB_URL_FIJA;
-SB_KEY = SB_KEY_FIJA;
-iniciarApp();
+SB_URL = localStorage.getItem('sb_url')||'';
+SB_KEY = localStorage.getItem('sb_key')||'';
+if(SB_URL && SB_KEY){ iniciarApp(); }
+else{ document.getElementById('setupScreen').style.display='block'; }
 </script>
 </body>
 </html>
