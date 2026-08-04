@@ -193,6 +193,7 @@ tbody td:first-child{text-align:left;font-weight:500}
   <button class="nav-btn" onclick="goTo('catalogo')">📋 Catálogo</button>
   <button class="nav-btn" onclick="goTo('corte')">🥩 Corte</button>
   <button class="nav-btn" onclick="goTo('bodega')">📦 Bodega</button>
+  <button class="nav-btn" onclick="goTo('sigma')">🚚 Sigma</button>
   <button class="nav-btn" onclick="goTo('porcionar')">🔪 Porcionar</button>
   <button class="nav-btn" onclick="goTo('diffs')">⚖️ Diferencias</button>
 </div>
@@ -212,6 +213,7 @@ tbody td:first-child{text-align:left;font-weight:500}
   <button class="accion-btn" onclick="goTo('catalogo')"><span>📋 &nbsp;Catálogo de productos</span><span style="color:var(--gold)">›</span></button>
   <button class="accion-btn" onclick="goTo('corte')"><span>🥩 &nbsp;Registrar corte del día</span><span style="color:var(--gold)">›</span></button>
   <button class="accion-btn" onclick="goTo('bodega')"><span>📦 &nbsp;Bodega y transferencias</span><span style="color:var(--gold)">›</span></button>
+  <button class="accion-btn" onclick="goTo('sigma')"><span>🚚 &nbsp;Entrada de Sigma</span><span style="color:var(--gold)">›</span></button>
   <button class="accion-btn" onclick="goTo('porcionar')"><span>🔪 &nbsp;Porcionar piezas</span><span style="color:var(--gold)">›</span></button>
   <button class="accion-btn" onclick="goTo('diffs')"><span>⚖️ &nbsp;Diferencias del mes</span><span style="color:var(--gold)">›</span></button>
   <div class="sec-hdr">Resumen del mes</div>
@@ -338,6 +340,31 @@ tbody td:first-child{text-align:left;font-weight:500}
   <div class="btn-row"><button class="btn btn-gold" onclick="confirmarTransf()">✓ Confirmar transferencia</button></div>
 </div>
 
+<!-- SIGMA -->
+<div class="screen" id="screen-sigma">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:16px;font-weight:600">🚚 Entrada de Sigma</div>
+      <div style="font-size:12px;color:var(--text2)">Lo que llega cada semana · se suma a bodega</div>
+    </div>
+    <button class="btn no-print" onclick="imprimirSeccion('sigma')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+  </div>
+  <div class="print-header" id="phSigma">LOS PARES 84×88 — Entrada de Sigma</div>
+
+  <div class="hint no-print">💡 Escribe cuántas <b>piezas</b> llegaron de cada producto. Al confirmar se <span style="color:var(--green)"><b>suman a bodega</b></span> y queda un registro en el historial. No toca el corte ni el stock de restaurante.</div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>En bodega</th><th style="background:var(--greenbg)">Llegó de Sigma</th><th>Nueva bodega</th></tr></thead>
+      <tbody id="sgTbody"><tr><td colspan="4" class="loader">Cargando...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="btn-row"><button class="btn btn-gold" onclick="confirmarSigma()">✓ Confirmar entrada de Sigma</button></div>
+
+  <div class="sec-hdr" style="margin-top:24px">📋 Historial de entregas</div>
+  <div id="sgHistorial" style="margin-top:8px"><div class="loader">Cargando historial...</div></div>
+</div>
+
 <!-- DIFERENCIAS -->
 <div class="screen" id="screen-diffs">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
@@ -459,8 +486,8 @@ async function goTo(id){
   _seccionActual = id;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dash','catalogo','corte','bodega','porcionar','diffs'][i]===id));
-  const fn={dash:rDash,catalogo:()=>{cargarCatalogo();},corte:()=>{fechaCorte=todayStr();document.getElementById('fechaSel').value=fechaCorte;cargarCorte();},bodega:rBodega,porcionar:rPorcionado,diffs:rDiffs};
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dash','catalogo','corte','bodega','sigma','porcionar','diffs'][i]===id));
+  const fn={dash:rDash,catalogo:()=>{cargarCatalogo();},corte:()=>{fechaCorte=todayStr();document.getElementById('fechaSel').value=fechaCorte;cargarCorte();},bodega:rBodega,sigma:rSigma,porcionar:rPorcionado,diffs:rDiffs};
   if(fn[id]) fn[id]();
 }
 
@@ -1076,6 +1103,102 @@ function getSalidasEsperadas(nombreFuente){
 
 let salidasPorItem = {};
 
+// ── SIGMA (entrada semanal a bodega) ──────────────────────────────────────────
+function semanaISO(d=new Date()){
+  const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=dt.getUTCDay()||7;
+  dt.setUTCDate(dt.getUTCDate()+4-day);
+  const yStart=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+  const wk=Math.ceil((((dt-yStart)/86400000)+1)/7);
+  return `${dt.getUTCFullYear()}-W${String(wk).padStart(2,'0')}`;
+}
+
+function updSigma(id,val){
+  const p=catalogo.find(x=>x.id===id);
+  if(p){ p._sigma=r(val); }
+  // Actualiza solo la celda "nueva bodega" sin re-render completo
+  const cell=document.getElementById('sgNueva_'+id);
+  if(cell&&p){ cell.textContent=f(r(p.stock_bodega)+r(p._sigma||0)); }
+}
+
+async function rSigma(){
+  const bp=catalogo.filter(p=>p.bodega&&p.activo!==false);
+  document.getElementById('sgTbody').innerHTML=bp.map(p=>{
+    const sg=r(p._sigma||0);
+    return`<tr>
+      <td>${p.nombre}${p.cod?`<div style="font-size:11px;color:var(--text3)">${p.cod}</div>`:''}</td>
+      <td style="font-weight:600">${f(p.stock_bodega)}</td>
+      <td style="background:var(--greenbg)"><input class="inp inp-sm" type="number" inputmode="decimal" value="${sg||''}" placeholder="0" onchange="updSigma(${p.id},this.value)" onfocus="this.select()"></td>
+      <td style="color:var(--green)" id="sgNueva_${p.id}">${f(r(p.stock_bodega)+sg)}</td>
+    </tr>`;
+  }).join('');
+  rSigmaHistorial();
+}
+
+async function rSigmaHistorial(){
+  const cont=document.getElementById('sgHistorial');
+  try{
+    const rows=await sbGet('entradas_sigma','?order=fecha.desc,created_at.desc&limit=200');
+    window._sigmaHistCache=rows||[];
+    if(!rows||!rows.length){ cont.innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px">Aún no hay entregas registradas.</div>'; return; }
+    // Agrupar por semana
+    const porSem={};
+    rows.forEach(rw=>{ (porSem[rw.semana]=porSem[rw.semana]||[]).push(rw); });
+    let html='';
+    Object.keys(porSem).sort().reverse().forEach(sem=>{
+      const items=porSem[sem];
+      const fecha=items[0].fecha;
+      const totalPz=items.reduce((s,x)=>s+r(x.cantidad),0);
+      html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden">
+        <div style="background:var(--bg2);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+          <div><b style="color:var(--gold)">Semana ${sem}</b> <span style="color:var(--text3);font-size:12px">· ${fecha}</span></div>
+          <div style="font-size:12px;color:var(--text2)">${items.length} productos · ${f(totalPz)} pz</div>
+        </div>
+        <div style="padding:8px 14px">`;
+      items.forEach(x=>{
+        html+=`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid var(--border)">
+          <span>${x.producto_nombre}</span><span style="color:var(--green)">+${f(x.cantidad)} pz</span></div>`;
+      });
+      html+=`</div></div>`;
+    });
+    cont.innerHTML=html;
+  }catch(e){
+    cont.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px">Error al cargar historial: ${e.message}</div>`;
+  }
+}
+
+async function confirmarSigma(){
+  const conEntrada=catalogo.filter(p=>p.bodega&&p.activo!==false&&r(p._sigma||0)>0);
+  if(!conEntrada.length){ alert('Escribe al menos una cantidad que haya llegado de Sigma.'); return; }
+
+  const resumen=conEntrada.map(p=>`• ${p.nombre}: +${f(p._sigma)} pz`).join('\n');
+  if(!confirm(`Confirmar entrada de Sigma:\n\n${resumen}\n\nSe SUMAN a bodega y se guardan en el historial.`)) return;
+
+  const btn=event&&event.target?event.target:null;
+  if(btn){ btn.disabled=true; btn.textContent='Guardando...'; }
+
+  try{
+    const fecha=todayStr();
+    const semana=semanaISO(new Date());
+    for(const p of conEntrada){
+      const cant=r(p._sigma);
+      const nuevaBodega=r(p.stock_bodega)+cant;
+      // 1. Sumar a bodega (solo stock_bodega, nada más)
+      await sbPatch('catalogo',`?id=eq.${p.id}`,{stock_bodega:nuevaBodega,updated_at:new Date().toISOString()});
+      p.stock_bodega=nuevaBodega;
+      // 2. Guardar en historial
+      await sbPost('entradas_sigma',{fecha,semana,producto_id:p.id,producto_nombre:p.nombre,cantidad:cant});
+      p._sigma=0;
+    }
+    alert('✅ Entrada de Sigma registrada. Bodega actualizada.');
+    rSigma();
+    if(btn){ btn.disabled=false; btn.textContent='✓ Confirmar entrada de Sigma'; }
+  }catch(e){
+    alert('⚠️ Error al guardar: '+e.message);
+    if(btn){ btn.disabled=false; btn.textContent='✓ Confirmar entrada de Sigma'; }
+  }
+}
+
 async function rPorcionado(){
   document.getElementById('porcionarLista').innerHTML='<div class="loader">⏳ Cargando piezas pendientes...</div>';
   try{
@@ -1214,6 +1337,7 @@ function imprimirSeccion(id){
     catalogo: `Catálogo de productos · ${fecha}`,
     corte:    `Corte del día · ${document.getElementById('cFecha').textContent}`,
     bodega:   `Bodega (Casa) · ${fecha}`,
+    sigma:    `Entrada de Sigma · ${fecha}`,
     diffs:    `Diferencias & Cargos · ${fecha}`,
   };
 
@@ -1273,6 +1397,22 @@ function imprimirSeccion(id){
       body+=`<tr><td><b>${p.nombre}</b></td><td style="color:#888">${p.cod||'—'}</td><td>${f(p.stock_bodega)}</td><td><b>${req||'—'}</b></td><td style="${ex<2&&r(p.stock_bodega)>0?'color:#c00':''}">${f(ex)}</td><td>${porcionar[p.id]?'⚙️ Porcionar':'→ Directo'}</td><td>${p.precio?'$'+p.precio:'—'}</td></tr>`;
     });
     body+=`</tbody></table></div>`;
+  }
+
+  else if(id==='sigma'){
+    const sg=window._sigmaHistCache||[];
+    if(!sg.length){ body+=`<div class="nota">Sin entregas registradas todavía.</div>`; }
+    else{
+      const porSem={};
+      sg.forEach(rw=>{ (porSem[rw.semana]=porSem[rw.semana]||[]).push(rw); });
+      Object.keys(porSem).sort().reverse().forEach(sem=>{
+        const items=porSem[sem];
+        body+=`<div class="section"><div class="section-hdr">Semana ${sem} · ${items[0].fecha}</div>
+          <table><thead><tr><th>Producto</th><th>Piezas</th></tr></thead><tbody>`;
+        items.forEach(x=>{ body+=`<tr><td>${x.producto_nombre}</td><td>+${f(x.cantidad)}</td></tr>`; });
+        body+=`</tbody></table></div>`;
+      });
+    }
   }
 
   else if(id==='diffs'){
