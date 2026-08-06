@@ -1509,8 +1509,15 @@ async function iniciarApp(){
 }
 
 // Arrancar
-SB_URL = localStorage.getItem('sb_url')||'';
-SB_KEY = localStorage.getItem('sb_key')||'';
+// Credenciales por defecto: si localStorage está vacío (ej. tras borrar caché),
+// usa estas fijas para no volver a pedir la configuración.
+const SB_URL_DEFAULT = 'https://vfhjuojcdslffgfqvhql.supabase.co';
+const SB_KEY_DEFAULT = 'sb_publishable_CflZaiS3yyyycfKvTrR3Jw_qwbjo9lV';
+SB_URL = localStorage.getItem('sb_url') || SB_URL_DEFAULT;
+SB_KEY = localStorage.getItem('sb_key') || SB_KEY_DEFAULT;
+// Guardar en localStorage para futuras aperturas
+if(!localStorage.getItem('sb_url')) localStorage.setItem('sb_url', SB_URL);
+if(!localStorage.getItem('sb_key')) localStorage.setItem('sb_key', SB_KEY);
 if(SB_URL && SB_KEY){ iniciarApp(); }
 else{ document.getElementById('setupScreen').style.display='block'; }
 </script>
