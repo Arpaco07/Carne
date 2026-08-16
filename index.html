@@ -326,9 +326,22 @@ tbody td:first-child{text-align:left;font-weight:500}
       <div style="font-size:16px;font-weight:600">Bodega (Casa)</div>
       <div style="font-size:12px;color:var(--text2)">Stock en casa · Lo que mandas al restaurante hoy</div>
     </div>
-    <button class="btn no-print" onclick="imprimirSeccion('bodega')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn no-print" onclick="toggleHistBodega()" id="btnHistBodega" style="padding:8px 14px;font-size:12px">📋 Historial</button>
+      <button class="btn no-print" onclick="imprimirSeccion('bodega')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
+    </div>
   </div>
   <div class="print-header" id="phBodega">LOS PARES 84×88 — Bodega</div>
+
+  <!-- HISTORIAL DE MOVIMIENTOS -->
+  <div id="histBodegaPanel" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:14px;font-weight:600">📋 Movimientos del día</span>
+      <input type="date" class="inp" id="fechaHistBodega" style="width:auto;font-size:13px;padding:6px 10px" onchange="cargarHistBodega()">
+    </div>
+    <div id="histBodegaContent"><div class="loader">Selecciona una fecha...</div></div>
+  </div>
+
   <div class="stats" id="bStats"></div>
   <div class="hint no-print">💡 <span style="color:var(--amber)"><b>Requerido</b></span> = cuántas piezas mandas hoy. <span style="color:var(--green)"><b>Directo</b></span> = va al restaurante tal cual. <span style="color:var(--amber)"><b>Porcionar</b></span> = se procesa en cocina antes (tacos, corte, etc.) — toca el botón para cambiar.</div>
   <div class="tbl-wrap">
@@ -917,6 +930,89 @@ function togglePorcionar(id){
   rBodega();
 }
 
+// ── HISTORIAL DE MOVIMIENTOS DE BODEGA ────────────────────────────────────────
+function toggleHistBodega(){
+  const panel = document.getElementById('histBodegaPanel');
+  const abierto = panel.style.display !== 'none';
+  panel.style.display = abierto ? 'none' : 'block';
+  if(!abierto){
+    const inp = document.getElementById('fechaHistBodega');
+    if(!inp.value) inp.value = todayStr();
+    cargarHistBodega();
+  }
+}
+
+async function cargarHistBodega(){
+  const fecha = document.getElementById('fechaHistBodega').value || todayStr();
+  const cont = document.getElementById('histBodegaContent');
+  cont.innerHTML = '<div class="loader">Cargando movimientos...</div>';
+  try{
+    // Traer transferencias y entradas de Sigma de esa fecha
+    const [transf, sigma] = await Promise.all([
+      sbGet('transferencias', `?fecha=eq.${fecha}&order=id.desc`),
+      sbGet('entradas_sigma', `?fecha=eq.${fecha}&order=id.desc`)
+    ]);
+
+    // Mapa id→nombre para las transferencias (solo guardan producto_id)
+    const nombre = {};
+    catalogo.forEach(p=>{ nombre[p.id]=p.nombre; });
+
+    let html = '';
+
+    // ── ENTRADAS DE SIGMA (lo que llegó a bodega) ──
+    if(sigma && sigma.length){
+      const totalSg = sigma.reduce((s,x)=>s+r(x.cantidad),0);
+      html += `<div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">🚚 Entró de Sigma · ${sigma.length} productos · ${f(totalSg)} pz</div>`;
+      sigma.forEach(x=>{
+        html += `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)">
+          <span>${x.producto_nombre||nombre[x.producto_id]||'?'}</span>
+          <span style="color:var(--green)">+${f(x.cantidad)} pz</span></div>`;
+      });
+      html += `</div>`;
+    }
+
+    // ── TRANSFERENCIAS (lo que salió de bodega al restaurante) ──
+    if(transf && transf.length){
+      const directo = transf.filter(t=>t.nota==='directo');
+      const porc = transf.filter(t=>t.nota==='porcionar');
+
+      if(directo.length){
+        const tot = directo.reduce((s,x)=>s+r(x.cantidad),0);
+        html += `<div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">→ Directo al restaurante · ${directo.length} productos · ${f(tot)} pz</div>`;
+        directo.forEach(x=>{
+          html += `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)">
+            <span>${nombre[x.producto_id]||'?'}</span>
+            <span style="color:var(--gold)">−${f(x.cantidad)} pz</span></div>`;
+        });
+        html += `</div>`;
+      }
+
+      if(porc.length){
+        const tot = porc.reduce((s,x)=>s+r(x.cantidad),0);
+        html += `<div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">⚙️ Mandado a porcionar · ${porc.length} productos · ${f(tot)} pz</div>`;
+        porc.forEach(x=>{
+          html += `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)">
+            <span>${nombre[x.producto_id]||'?'}</span>
+            <span style="color:var(--amber)">−${f(x.cantidad)} pz</span></div>`;
+        });
+        html += `</div>`;
+      }
+    }
+
+    if(!html){
+      const f2 = new Date(fecha+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+      html = `<div style="color:var(--text3);font-size:13px;padding:10px;text-align:center">Sin movimientos registrados el ${f2}.</div>`;
+    }
+
+    cont.innerHTML = html;
+  }catch(e){
+    cont.innerHTML = `<div style="color:var(--red);font-size:13px;padding:10px">Error: ${e.message}</div>`;
+  }
+}
+
 function rBodega(){
   const bp=catalogo.filter(p=>p.bodega&&p.activo!==false);
   const ts=bp.reduce((s,p)=>s+r(p.stock_bodega),0);
@@ -1049,9 +1145,9 @@ const PORCIONADO_MAP = [
   { src:'rib eye',                   out:['TAPA DE RIB EYE','OJO DE RIB EYE','RIB EYE','Esparragos de rib','CHICHARRON DE RIB EYE'] },
   // Carnes individuales
   { src:'arrachera',                 out:['ARRACHERA','ARRACHERA TACOS'] },
-  { src:'filete cab',                out:['FILETE'] },
+  { src:'filete cab',                out:['FILETE CAB','FILETE','VOLCAN'] },
   { src:'filete nacional',           out:['FILETE','VOLCAN'] },
-  { src:'filete',                    out:['FILETE'] },
+  { src:'filete',                    out:['FILETE CAB','FILETE','VOLCAN'] },
   { src:'picana',                    out:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
   { src:'picaña',                    out:['PICAÑA','PICAÑA PIZZA Y TACOS','BARBACOA DE PICAÑA'] },
   { src:'lengua',                    out:['LENGUA A LA VERACRUZANA','LENGUA'] },
