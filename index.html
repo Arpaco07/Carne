@@ -305,7 +305,7 @@ tbody td:first-child{text-align:left;font-weight:500}
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn no-print" onclick="imprimirSeccion('corte')" style="padding:8px 14px;font-size:12px">🖨️ PDF</button>
-      <input type="date" class="inp no-print" id="fechaSel" style="width:auto;font-size:13px;padding:8px 12px" onchange="cargarCorte()">
+      <input type="date" class="inp no-print" id="fechaSel" style="width:auto;font-size:13px;padding:8px 12px" onchange="cambiarFechaCorte()">
     </div>
   </div>
   <div class="print-header" id="phCorte"></div>
@@ -467,6 +467,7 @@ let corteHoy = {};    // {productoId: {stock_resta,vendido,tiene}}
 let editandoId = null;
 let fechaCorte = todayStr();
 let _autoSaveTimer = null;   // debounce: guarda 1.2s después del último cambio
+let _corteDirty = false;     // hay cambios del usuario sin guardar en la fecha que se está editando
 
 function todayStr(){
   const d = new Date();
@@ -486,14 +487,11 @@ let _seccionActual = 'dash';
 async function goTo(id){
   // Autoguardar corte antes de salir — si falla, avisar y no navegar
   if(_seccionActual === 'corte' && id !== 'corte'){
-    const tieneData = Object.values(corteHoy).some(c=>r(c.stock_resta)>0||r(c.vendido)>0);
-    if(tieneData){
-      try{
-        await autoGuardarCorte();
-      }catch(e){
-        alert('⚠️ No se pudo guardar el corte antes de cambiar de sección.\nRevisa tu conexión e intenta de nuevo.\n\nError: '+e.message);
-        return; // No navegar si falló el guardado
-      }
+    try{
+      await flushCorte();
+    }catch(e){
+      alert('⚠️ No se pudo guardar el corte antes de cambiar de sección.\nRevisa tu conexión e intenta de nuevo.\n\nError: '+e.message);
+      return; // No navegar si falló el guardado
     }
   }
   _seccionActual = id;
@@ -555,6 +553,36 @@ async function autoGuardarCorte(){
     if(btn){ btn.textContent='❌ Error al guardar'; btn.disabled=false; setTimeout(()=>{btn.textContent='Guardar corte del día';},2500); }
     throw e; // Relanzar para que goTo pueda atraparlo
   }
+}
+
+// Vacía cualquier cambio pendiente ANTES de cambiar de fecha o de sección.
+// Cancela el temporizador del debounce y guarda de inmediato usando la fecha
+// que se estaba editando (fechaCorte), no la nueva. Solo guarda si el usuario
+// realmente editó algo (_corteDirty), para no escribir el arrastre automático.
+async function flushCorte(){
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = null;
+  if(_corteDirty){
+    try{
+      await autoGuardarCorte();
+    }finally{
+      _corteDirty = false;
+    }
+  }
+}
+
+// Se llama cuando cambias la fecha en el calendario del Corte.
+// 1) Guarda el día que venías editando  2) recién entonces carga la nueva fecha.
+async function cambiarFechaCorte(){
+  try{
+    await flushCorte();
+  }catch(e){
+    alert('⚠️ No se pudo guardar el día anterior.\nRevisa tu conexión e intenta de nuevo.\n\nError: '+e.message);
+    // Regresa el calendario a la fecha que estabas editando para no perder datos
+    const sel=document.getElementById('fechaSel'); if(sel) sel.value=fechaCorte;
+    return;
+  }
+  cargarCorte();
 }
 
 // ── CONEXIÓN ──────────────────────────────────────────────────────────────────
@@ -761,6 +789,7 @@ async function cargarCorte(){
     }
 
     rCorteStats();rCorteTabla();
+    _corteDirty=false;
   }catch(e){
     document.getElementById('corteTabla').innerHTML=`<div class="alert">Error: ${e.message}</div>`;
   }
@@ -824,6 +853,7 @@ function _dispararAutoGuardado(){
     if(tieneData){
       try{
         await autoGuardarCorte();
+        _corteDirty = false;
       }catch(e){
         mostrarToast('❌ Error guardando — revisa conexión','error',4000);
       }
@@ -833,18 +863,21 @@ function _dispararAutoGuardado(){
 function updSR(id,val){
   if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
   corteHoy[id].stock_resta=r(val);
+  _corteDirty=true;
   actualizarFila(id);rCorteStats();
   _dispararAutoGuardado();
 }
 function updV(id,val){
   if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
   corteHoy[id].vendido=r(val);
+  _corteDirty=true;
   actualizarFila(id);rCorteStats();
   _dispararAutoGuardado();
 }
 function updT(id,val){
   if(!corteHoy[id]) corteHoy[id]={stock_resta:0,vendido:0,tiene:''};
   corteHoy[id].tiene=val;
+  _corteDirty=true;
   actualizarFila(id);rCorteStats();
   _dispararAutoGuardado();
 }
